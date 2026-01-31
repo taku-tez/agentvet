@@ -36,13 +36,13 @@ A single malicious skill can exfiltrate credentials, install backdoors, or hijac
 ## Installation
 
 ```bash
-npm install -g agentvet
+npm install -g @agentvet/cli
 ```
 
 Or run directly with npx:
 
 ```bash
-npx agentvet scan ./my-skills
+npx @agentvet/cli scan ./my-skills
 ```
 
 ---
@@ -266,19 +266,6 @@ jobs:
 # .git/hooks/pre-commit
 npx agentvet scan . --quiet || exit 1
 ```
-
----
-
-## Roadmap
-
-- [x] CLI with basic rules
-- [x] MCP tool configuration scanning
-- [x] YARA rule integration
-- [x] LLM-based intent analysis for natural language instructions
-- [x] Dependency vulnerability scanning (npm audit, pip-audit integration)
-- [ ] npm publish (install globally with `npm install -g agentvet`)
-- [ ] GitHub Action for CI/CD integration
-- [ ] Additional detection rules
 
 ---
 
