@@ -9,7 +9,9 @@
   "scripts": {
     "test": "node --test test/*.test.js",
     "lint": "eslint src bin",
-    "scan": "node bin/agentvet.js scan ."
+    "lint:fix": "eslint src bin --fix",
+    "scan": "node bin/agentvet.js scan .",
+    "scan:sarif": "node bin/agentvet.js scan . --format sarif --output results.sarif"
   },
   "keywords": [
     "security",
@@ -32,6 +34,9 @@
     "url": "https://github.com/taku-tez/agentvet/issues"
   },
   "homepage": "https://github.com/taku-tez/agentvet#readme",
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  },
   "engines": {
     "node": ">=18.0.0"
   },

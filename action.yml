@@ -27,6 +27,14 @@ inputs:
     description: 'Fail the action if critical issues are found'
     required: false
     default: 'true'
+  sarif:
+    description: 'Generate SARIF output for GitHub Code Scanning'
+    required: false
+    default: 'false'
+  upload-sarif:
+    description: 'Upload SARIF to GitHub Code Scanning (requires security-events: write)'
+    required: false
+    default: 'false'
 
 outputs:
   findings:
@@ -89,10 +97,27 @@ runs:
           exit 1
         fi
     
+    - name: Generate SARIF Report
+      if: ${{ inputs.sarif == 'true' || inputs.upload-sarif == 'true' }}
+      shell: bash
+      run: |
+        agentvet scan ${{ inputs.path }} --format sarif --output agentvet-results.sarif \
+          ${{ inputs.yara == 'false' && '--no-yara' || '' }} \
+          ${{ inputs.deps == 'false' && '--no-deps' || '' }} || true
+
+    - name: Upload SARIF to GitHub Code Scanning
+      if: ${{ inputs.upload-sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: agentvet-results.sarif
+        category: agentvet
+
     - name: Upload Report
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: agentvet-report
-        path: agentvet-report.json
+        path: |
+          agentvet-report.json
+          agentvet-results.sarif
         if-no-files-found: ignore

@@ -3,9 +3,6 @@
  * Output formatting for scan results
  */
 
-const fs = require('fs');
-const path = require('path');
-
 // ANSI color codes
 const colors = {
   red: (s) => `\x1b[31m${s}\x1b[0m`,
@@ -170,7 +167,7 @@ function formatFinding(finding, colorFn) {
   }
   
   if (finding.fixed) {
-    lines.push(colors.green(`    ✅ Fixed`));
+    lines.push(colors.green('    ✅ Fixed'));
   }
   
   lines.push('');

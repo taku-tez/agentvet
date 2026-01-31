@@ -31,6 +31,27 @@ jobs:
       - name: Self-scan
         run: node bin/agentvet.js scan . --no-yara --no-deps --quiet || true
 
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Generate SARIF
+        run: node bin/agentvet.js scan . --no-yara --no-deps --format sarif --output results.sarif || true
+      
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: agentvet-self-scan
+
   lint:
     runs-on: ubuntu-latest
     
@@ -41,9 +62,14 @@ jobs:
         with:
           node-version: 20
       
-      - name: Check formatting
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run ESLint
+        run: npm run lint
+      
+      - name: Syntax check
         run: |
-          # Basic syntax check
           node --check bin/agentvet.js
           node --check src/index.js
           node --check src/scanner.js

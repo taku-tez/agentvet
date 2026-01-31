@@ -3,7 +3,7 @@
  * Integrates npm audit, pip-audit, and additional security checks
  */
 
-const { execSync, spawn } = require('child_process');
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -414,7 +414,7 @@ class DependencyScanner {
     const requirementsPath = path.join(targetPath, 'requirements.txt');
     
     try {
-      let args = ['--format', 'json'];
+      const args = ['--format', 'json'];
       
       if (fs.existsSync(requirementsPath)) {
         args.push('-r', requirementsPath);

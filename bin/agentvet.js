@@ -73,8 +73,6 @@ Exit codes:
 
 // Glob expansion
 function expandGlob(pattern) {
-  const results = [];
-  
   if (!pattern.includes('*') && !pattern.includes('?')) {
     return [pattern];
   }
@@ -730,7 +728,7 @@ __tests__/
 *.generated.*
 `;
 
-  let created = [];
+  const created = [];
 
   if (!fs.existsSync('.agentvetrc.yaml')) {
     fs.writeFileSync('.agentvetrc.yaml', configContent);

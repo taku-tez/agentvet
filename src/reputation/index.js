@@ -4,7 +4,6 @@
  */
 
 const https = require('https');
-const url = require('url');
 
 // Rate limiting
 const RATE_LIMITS = {
@@ -450,7 +449,7 @@ class ReputationChecker {
             severity: 'warning',
             score: result.score,
             sources: result.sources,
-            message: `Suspicious URL detected`,
+            message: 'Suspicious URL detected',
           });
         }
       } catch (e) {
@@ -487,7 +486,7 @@ class ReputationChecker {
             severity: 'warning',
             score: result.score,
             sources: result.sources,
-            message: `Suspicious IP detected`,
+            message: 'Suspicious IP detected',
           });
         }
       } catch (e) {
