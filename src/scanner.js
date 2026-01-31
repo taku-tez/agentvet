@@ -391,6 +391,9 @@ class Scanner {
     
     this.results.scannedFiles++;
     
+    // Parse ignore comments
+    const ignoreMap = this.parseIgnoreComments(content);
+    
     // Determine file type for rule filtering
     const isDocFile = ['.md', '.mdx', '.txt', '.rst'].includes(ext);
     
@@ -400,13 +403,19 @@ class Scanner {
       if (isDocFile && this.isCodeOnlyRule(rule)) {
         continue;
       }
-      this.applyRule(rule, filePath, content);
+      this.applyRule(rule, filePath, content, ignoreMap);
     }
 
     // Apply custom rules if enabled
     if (this.customRulesEngine) {
       const customFindings = this.customRulesEngine.scan(filePath, content);
       for (const finding of customFindings) {
+        // Check if this finding should be ignored
+        if (this.shouldIgnore(ignoreMap, finding.line, finding.rule)) {
+          this.results.ignoredFindings = (this.results.ignoredFindings || 0) + 1;
+          continue;
+        }
+        
         this.results.findings.push({
           ruleId: finding.rule,
           severity: finding.severity,
@@ -434,9 +443,83 @@ class Scanner {
   }
 
   /**
+   * Parse ignore comments from file content
+   * Supports:
+   *   // agentvet-ignore - ignore this line
+   *   // agentvet-ignore-next-line - ignore next line
+   *   // agentvet-ignore rule-id - ignore specific rule
+   *   block comment style with agentvet-ignore
+   *   # agentvet-ignore - for shell/python/yaml
+   *   HTML comment with agentvet-ignore - for HTML/markdown
+   */
+  parseIgnoreComments(content) {
+    const ignoreMap = {
+      lines: new Set(),      // Lines to completely ignore
+      lineRules: new Map(),  // Line -> Set of rule IDs to ignore
+    };
+
+    const lines = content.split('\n');
+    
+    // Patterns for ignore comments
+    const ignorePatterns = [
+      /(?:\/\/|#|\/\*)\s*agentvet-ignore(?:-next-line)?(?:\s+([\w-]+(?:\s*,\s*[\w-]+)*))?/gi,
+      /<!--\s*agentvet-ignore(?:-next-line)?(?:\s+([\w-]+(?:\s*,\s*[\w-]+)*))?\s*-->/gi,
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineNum = i + 1;
+
+      for (const pattern of ignorePatterns) {
+        pattern.lastIndex = 0;
+        const match = pattern.exec(line);
+        
+        if (match) {
+          const isNextLine = line.includes('ignore-next-line');
+          const targetLine = isNextLine ? lineNum + 1 : lineNum;
+          const ruleIds = match[1] ? match[1].split(/\s*,\s*/).map(r => r.trim()) : null;
+
+          if (ruleIds && ruleIds.length > 0) {
+            // Ignore specific rules
+            if (!ignoreMap.lineRules.has(targetLine)) {
+              ignoreMap.lineRules.set(targetLine, new Set());
+            }
+            ruleIds.forEach(id => ignoreMap.lineRules.get(targetLine).add(id));
+          } else {
+            // Ignore all rules on this line
+            ignoreMap.lines.add(targetLine);
+          }
+        }
+      }
+    }
+
+    return ignoreMap;
+  }
+
+  /**
+   * Check if a finding should be ignored
+   */
+  shouldIgnore(ignoreMap, lineNum, ruleId) {
+    // Check if entire line is ignored
+    if (ignoreMap.lines.has(lineNum)) {
+      return true;
+    }
+
+    // Check if specific rule is ignored for this line
+    if (ignoreMap.lineRules.has(lineNum)) {
+      const ignoredRules = ignoreMap.lineRules.get(lineNum);
+      if (ignoredRules.has(ruleId) || ignoredRules.has('*')) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Apply a single rule to file content
    */
-  applyRule(rule, filePath, content) {
+  applyRule(rule, filePath, content, ignoreMap = null) {
     // Skip if severity doesn't match filter
     const severityOrder = { critical: 0, warning: 1, info: 2 };
     const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
@@ -451,6 +534,17 @@ class Scanner {
     
     while ((match = rule.pattern.exec(content)) !== null) {
       const lineNum = content.substring(0, match.index).split('\n').length;
+      
+      // Check if this finding should be ignored
+      if (ignoreMap && this.shouldIgnore(ignoreMap, lineNum, rule.id)) {
+        this.results.ignoredFindings = (this.results.ignoredFindings || 0) + 1;
+        // Prevent infinite loop for zero-width matches
+        if (match.index === rule.pattern.lastIndex) {
+          rule.pattern.lastIndex++;
+        }
+        continue;
+      }
+
       const lineContent = lines[lineNum - 1] || '';
       
       // Create finding

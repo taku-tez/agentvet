@@ -132,6 +132,12 @@ function printReport(results, targetPath) {
     lines.push(colors.green(`🔧 Auto-fixed ${results.fixedIssues} permission issues`));
   }
 
+  // Ignored findings
+  if (results.ignoredFindings > 0) {
+    lines.push('');
+    lines.push(colors.gray(`🔇 ${results.ignoredFindings} findings ignored (via agentvet-ignore comments)`));
+  }
+
   lines.push('');
 
   return lines.join('\n');
