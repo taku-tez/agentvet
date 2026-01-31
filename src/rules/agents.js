@@ -32,7 +32,7 @@ const rules = [
     id: 'agent-prompt-injection-jailbreak',
     severity: 'critical',
     description: 'Potential jailbreak pattern detected',
-    pattern: /(?:DAN|jailbreak|bypass|unlock|unrestricted\s+mode)/gi,
+    pattern: /\b(?:jailbreak|bypass\s+(?:safety|restrictions?|filters?)|unlock\s+(?:mode|restrictions?)|unrestricted\s+mode)\b/gi,
     recommendation: 'Remove jailbreak attempt patterns.',
   },
   {
@@ -119,16 +119,16 @@ const rules = [
   // ============================================
   {
     id: 'agent-sudo-pattern',
-    severity: 'critical',
+    severity: 'warning',
     description: 'Sudo or privilege escalation instruction',
-    pattern: /(?:sudo|as\s+root|with\s+admin|elevat(?:e|ed)\s+privileges?)/gi,
+    pattern: /(?:run\s+(?:as\s+)?sudo|execute\s+(?:with\s+)?sudo|(?:use|need|require)\s+sudo)/gi,
     recommendation: 'Avoid privilege escalation in agent instructions.',
   },
   {
     id: 'agent-sensitive-file-access',
     severity: 'critical',
     description: 'Access to sensitive system files',
-    pattern: /(?:\/etc\/(?:passwd|shadow|sudoers)|~\/\.ssh\/|\.aws\/credentials|\.env)/gi,
+    pattern: /(?:\/etc\/(?:passwd|shadow|sudoers)|~\/\.ssh\/|\.aws\/credentials)/gi,
     recommendation: 'Remove access to sensitive system files.',
   },
   {
@@ -192,7 +192,7 @@ const rules = [
     id: 'agent-tool-injection',
     severity: 'critical',
     description: 'Tool parameter injection pattern',
-    pattern: /\$\{.*\}\s*(?:;|&&|\|\|)/gi,
+    pattern: /\$\{[^}]*(?:exec|eval|spawn|system|cmd)[^}]*\}/gi,
     recommendation: 'Sanitize tool parameters to prevent injection.',
   },
 

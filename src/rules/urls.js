@@ -293,10 +293,10 @@ const rules = [
   // ============================================
   {
     id: 'dns-exfil-pattern',
-    severity: 'critical',
+    severity: 'warning',
     description: 'Potential DNS exfiltration pattern',
-    pattern: /[a-z0-9]{20,}\.[a-z0-9-]+\.[a-z]{2,}/gi,
-    recommendation: 'Long subdomains may indicate DNS-based data exfiltration.',
+    pattern: /[a-f0-9]{32,}\.[a-z0-9-]+\.[a-z]{2,}/gi,
+    recommendation: 'Very long hex subdomains may indicate DNS-based data exfiltration.',
   },
   {
     id: 'dns-txt-lookup',

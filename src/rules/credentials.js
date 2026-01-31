@@ -39,9 +39,8 @@ const rules = [
     id: 'credential-azure-key',
     severity: 'critical',
     description: 'Azure subscription key detected',
-    pattern: /[a-f0-9]{32}/gi,
+    pattern: /(?:azure|AZURE)[_\s]*(?:subscription|api)?[_\s]*(?:key|secret)['":\s]*[a-f0-9]{32}/gi,
     recommendation: 'Use Azure Key Vault or managed identities',
-    // Note: High false positive rate, combined with context
   },
 
   // ============================================
@@ -72,7 +71,7 @@ const rules = [
     id: 'credential-cohere-key',
     severity: 'critical',
     description: 'Cohere API key detected',
-    pattern: /[a-zA-Z0-9]{40}/g, // Combined with context
+    pattern: /(?:cohere|COHERE)[_\s]*(?:api[_\s]*)?(?:key|token)['":\s]*[a-zA-Z0-9]{40}/gi,
     recommendation: 'Use environment variables (COHERE_API_KEY)',
   },
   {
@@ -132,7 +131,7 @@ const rules = [
     id: 'credential-travis-token',
     severity: 'critical',
     description: 'Travis CI token detected',
-    pattern: /[a-zA-Z0-9]{22}/g, // Combined with "travis" context
+    pattern: /(?:travis|TRAVIS)[_\s]*(?:api[_\s]*)?(?:token|key)['":\s]*[a-zA-Z0-9]{22,}/gi,
     recommendation: 'Use Travis CI encrypted variables',
   },
 
@@ -334,7 +333,7 @@ const rules = [
     id: 'credential-algolia-key',
     severity: 'critical',
     description: 'Algolia API key detected',
-    pattern: /[a-f0-9]{32}/g, // Combined with "algolia" context
+    pattern: /(?:algolia|ALGOLIA)[_\s]*(?:api[_\s]*|admin[_\s]*|search[_\s]*)?(?:key|secret)['":\s]*[a-f0-9]{32}/gi,
     recommendation: 'Use search-only keys in frontend, admin keys in environment',
   },
   {
@@ -360,23 +359,23 @@ const rules = [
   },
   {
     id: 'credential-heroku-key',
-    severity: 'critical',
-    description: 'Heroku API key detected',
-    pattern: /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/g,
+    severity: 'warning',
+    description: 'Heroku API key pattern (UUID format)',
+    pattern: /(?:heroku|HEROKU)[_\s]*(?:api[_\s]*)?(?:key|token)['":\s]*[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi,
     recommendation: 'Use Heroku CLI authentication or environment variables',
   },
   {
     id: 'credential-vercel-token',
     severity: 'critical',
     description: 'Vercel token detected',
-    pattern: /[A-Za-z0-9]{24}/g, // Combined with "vercel" context
+    pattern: /(?:vercel|VERCEL)[_\s]*(?:api[_\s]*)?(?:token|key)['":\s]*[A-Za-z0-9]{24,}/gi,
     recommendation: 'Use environment variables (VERCEL_TOKEN)',
   },
   {
     id: 'credential-netlify-token',
     severity: 'critical',
     description: 'Netlify access token detected',
-    pattern: /[a-f0-9]{64}/g, // Combined with "netlify" context
+    pattern: /(?:netlify|NETLIFY)[_\s]*(?:auth[_\s]*)?(?:token|key)['":\s]*[a-f0-9]{40,}/gi,
     recommendation: 'Use environment variables (NETLIFY_AUTH_TOKEN)',
   },
   {
