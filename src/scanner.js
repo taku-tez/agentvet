@@ -75,6 +75,14 @@ try {
   DependencyScanner = null;
 }
 
+// LLM analyzer (optional)
+let LLMAnalyzer;
+try {
+  ({ LLMAnalyzer } = require('./llm/index.js'));
+} catch {
+  LLMAnalyzer = null;
+}
+
 // Files to always scan
 const PRIORITY_FILES = [
   'SKILL.md',
@@ -133,6 +141,7 @@ class Scanner {
       checkPermissions: true,
       yara: true, // Enable YARA scanning by default
       deps: true, // Enable dependency scanning by default
+      llm: false, // LLM analysis disabled by default (requires API key)
       ...options,
     };
     
@@ -149,6 +158,8 @@ class Scanner {
       yaraEnabled: false,
       depsEnabled: false,
       depsResults: null,
+      llmEnabled: false,
+      llmResults: null,
     };
     
     this.rules = [
@@ -181,6 +192,21 @@ class Scanner {
         this.results.depsEnabled = true;
       } catch (e) {
         this.depsScanner = null;
+      }
+    }
+    
+    // Initialize LLM analyzer if available and enabled
+    if (this.options.llm && LLMAnalyzer) {
+      try {
+        this.llmAnalyzer = new LLMAnalyzer(options.llmOptions || {});
+        if (this.llmAnalyzer.isAvailable()) {
+          this.results.llmEnabled = true;
+          this.results.llmProvider = this.llmAnalyzer.getStatus().provider;
+        } else {
+          this.llmAnalyzer = null;
+        }
+      } catch (e) {
+        this.llmAnalyzer = null;
       }
     }
   }
@@ -220,6 +246,11 @@ class Scanner {
     // Run dependency scan if enabled
     if (this.depsScanner) {
       await this.runDepsScan(resolvedPath);
+    }
+    
+    // Run LLM analysis if enabled
+    if (this.llmAnalyzer) {
+      await this.runLLMAnalysis(resolvedPath);
     }
     
     // Auto-fix if requested
@@ -618,6 +649,59 @@ class Scanner {
       }
     } catch (e) {
       // Dependency scan failed, continue without it
+    }
+  }
+
+  /**
+   * Run LLM-based intent analysis
+   */
+  async runLLMAnalysis(targetPath) {
+    if (!this.llmAnalyzer) return;
+    
+    try {
+      const llmResults = await this.llmAnalyzer.analyze(targetPath);
+      this.results.llmResults = llmResults;
+      
+      // Add LLM findings to main findings
+      for (const finding of llmResults.findings || []) {
+        // Map severity
+        let severity;
+        if (finding.severity === 'critical' || finding.severity === 'high') {
+          severity = 'critical';
+        } else if (finding.severity === 'medium') {
+          severity = 'warning';
+        } else {
+          severity = 'info';
+        }
+        
+        // Apply severity filter
+        const severityOrder = { critical: 0, warning: 1, info: 2 };
+        const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+        const findingLevel = severityOrder[severity] ?? 2;
+        
+        if (findingLevel > filterLevel) continue;
+        
+        // Skip ignored files
+        if (finding.file && this.isIgnored(finding.file)) continue;
+        
+        this.results.findings.push({
+          ruleId: `llm-${finding.type || 'analysis'}`,
+          severity,
+          description: `[LLM] ${finding.description || finding.type}`,
+          file: finding.file || 'unknown',
+          line: 0,
+          snippet: finding.evidence || '',
+          recommendation: finding.recommendation || 'Review this instruction for potential security issues.',
+          category: 'llm-analysis',
+          source: 'llm',
+        });
+        
+        this.results.summary[severity]++;
+        this.results.summary.total++;
+      }
+    } catch (e) {
+      // LLM analysis failed, continue without it
+      this.results.llmError = e.message;
     }
   }
 }

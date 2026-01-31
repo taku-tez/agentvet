@@ -45,6 +45,9 @@ function printReport(results, targetPath) {
   } else {
     lines.push(`Deps: ${colors.gray('disabled')}`);
   }
+  if (results.llmEnabled) {
+    lines.push(`LLM: ${colors.green('enabled')} (${results.llmProvider || 'default'})`);
+  }
   lines.push(`Date: ${new Date().toISOString()}`);
   lines.push('');
 

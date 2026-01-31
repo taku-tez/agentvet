@@ -29,6 +29,7 @@ A single malicious skill can exfiltrate credentials, install backdoors, or hijac
 - 🔐 **File Permission Checks** — Warns when sensitive files have insecure permissions
 - 🦠 **YARA Integration** — Advanced threat detection with AI agent-specific YARA rules
 - 📦 **Dependency Scanning** — npm audit and pip-audit integration for vulnerability detection
+- 🧠 **LLM Intent Analysis** — AI-powered detection of malicious instructions in agent configs
 
 ---
 
@@ -88,6 +89,29 @@ agentvet scan ./my-project --no-deps
 Supports:
 - **npm**: Scans `package-lock.json` for known vulnerabilities
 - **pip**: Scans `requirements.txt` using pip-audit (requires `pip install pip-audit`)
+
+### LLM intent analysis
+
+Use AI to analyze agent instructions for malicious intent:
+
+```bash
+# Enable LLM analysis (requires API key)
+export OPENAI_API_KEY=sk-...
+agentvet scan ./skills --llm
+
+# Or use Anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+agentvet scan ./skills --llm --llm-provider anthropic
+
+# Specify model
+agentvet scan ./skills --llm --llm-model gpt-4o
+```
+
+Detects:
+- **Prompt injection** — Attempts to override system instructions
+- **Hidden commands** — Secret instructions triggered by conditions
+- **Data exfiltration** — Instructions to leak data externally
+- **Deceptive behavior** — Instructions to hide actions or lie
 
 ### YARA scanning
 
@@ -228,7 +252,7 @@ npx agentvet scan . --quiet || exit 1
 - [x] CLI with basic rules
 - [x] MCP tool configuration scanning
 - [x] YARA rule integration
-- [ ] LLM-based intent analysis for natural language instructions
+- [x] LLM-based intent analysis for natural language instructions
 - [x] Dependency vulnerability scanning (npm audit, pip-audit integration)
 - [ ] VS Code extension
 - [ ] Web dashboard

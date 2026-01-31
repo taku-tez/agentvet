@@ -27,6 +27,9 @@ Options:
   --no-yara         Disable YARA scanning
   --yara-rules <dir> Custom YARA rules directory
   --no-deps         Disable dependency vulnerability scanning
+  --llm             Enable LLM-based intent analysis (requires OPENAI_API_KEY or ANTHROPIC_API_KEY)
+  --llm-provider    LLM provider: openai (default) or anthropic
+  --llm-model       LLM model to use
 
 Examples:
   agentvet scan ./skills
@@ -53,6 +56,9 @@ function parseArgs(args) {
     yara: true,
     yaraRulesDir: null,
     deps: true,
+    llm: false,
+    llmProvider: null,
+    llmModel: null,
   };
 
   let i = 0;
@@ -102,6 +108,17 @@ function parseArgs(args) {
       case '--no-deps':
         options.deps = false;
         break;
+      case '--llm':
+        options.llm = true;
+        break;
+      case '--llm-provider':
+        options.llmProvider = args[++i];
+        options.llm = true;
+        break;
+      case '--llm-model':
+        options.llmModel = args[++i];
+        options.llm = true;
+        break;
       default:
         if (!options.command && !arg.startsWith('-')) {
           // Treat as path if no command yet
@@ -139,6 +156,11 @@ async function main() {
         yara: options.yara,
         yaraOptions: options.yaraRulesDir ? { rulesDir: options.yaraRulesDir } : undefined,
         deps: options.deps,
+        llm: options.llm,
+        llmOptions: (options.llmProvider || options.llmModel) ? {
+          provider: options.llmProvider,
+          model: options.llmModel,
+        } : undefined,
       });
 
       // Output results
