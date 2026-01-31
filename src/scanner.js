@@ -215,10 +215,26 @@ class Scanner {
     
     this.results.scannedFiles++;
     
+    // Determine file type for rule filtering
+    const isDocFile = ['.md', '.mdx', '.txt', '.rst'].includes(ext);
+    
     // Apply each rule
     for (const rule of this.rules) {
+      // Skip code-focused rules for documentation files
+      if (isDocFile && this.isCodeOnlyRule(rule)) {
+        continue;
+      }
       this.applyRule(rule, filePath, content);
     }
+  }
+
+  /**
+   * Check if rule should only apply to code files (not docs)
+   */
+  isCodeOnlyRule(rule) {
+    // MCP rules and command execution rules are code-focused
+    const codeOnlyPrefixes = ['mcp-', 'command-'];
+    return codeOnlyPrefixes.some(prefix => rule.id.startsWith(prefix));
   }
 
   /**
