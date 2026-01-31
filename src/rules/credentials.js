@@ -17,9 +17,18 @@ const rules = [
   {
     id: 'credential-aws-secret',
     severity: 'critical',
-    description: 'Potential AWS Secret Access Key detected',
-    pattern: /(?<![A-Za-z0-9/+=])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])/g,
+    description: 'AWS Secret Access Key detected',
+    // Improved: require context (variable name, key assignment, or proximity to AWS keywords)
+    pattern: /(?:aws[_\s-]*secret|secret[_\s-]*(?:access[_\s-]*)?key|AWS_SECRET_ACCESS_KEY|aws_secret|secretAccessKey)['":\s=]+['"]?([A-Za-z0-9/+=]{40})['"]?/gi,
     recommendation: 'Use environment variables or AWS credentials file',
+  },
+  {
+    id: 'credential-aws-secret-proximity',
+    severity: 'warning',
+    description: 'Potential AWS Secret Key (near AWS Access Key ID)',
+    // Detects 40-char Base64 strings only when AKIA key is nearby (within 200 chars)
+    pattern: /AKIA[0-9A-Z]{16}[\s\S]{0,200}['":\s=]+['"]?([A-Za-z0-9/+=]{40})['"]?/g,
+    recommendation: 'Use environment variables or AWS credentials file (~/.aws/credentials)',
   },
   {
     id: 'credential-gcp-key',

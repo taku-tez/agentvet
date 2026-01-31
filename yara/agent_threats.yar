@@ -5,7 +5,7 @@
 
 rule PromptInjection_SystemOverride {
     meta:
-        description = "Attempts to override system prompt or agent instructions"
+        description = "Attempts to override system prompt or agent instructions (high confidence)"
         severity = "critical"
         category = "prompt_injection"
         author = "AgentVet"
@@ -15,13 +15,32 @@ rule PromptInjection_SystemOverride {
         $s3 = "disregard your instructions" nocase
         $s4 = "forget your instructions" nocase
         $s5 = "new system prompt" nocase
-        $s6 = "override system" nocase
-        $s7 = "you are now" nocase
-        $s8 = "act as if you" nocase
-        $s9 = "pretend you are" nocase
-        $s10 = "from now on you" nocase
+        $s6 = "override system prompt" nocase
     condition:
         any of them
+}
+
+rule PromptInjection_SystemOverride_Context {
+    meta:
+        description = "Attempts to override agent behavior (requires context indicators)"
+        severity = "warning"
+        category = "prompt_injection"
+        author = "AgentVet"
+    strings:
+        $role1 = "you are now" nocase
+        $role2 = "act as if you" nocase
+        $role3 = "pretend you are" nocase
+        $role4 = "from now on you" nocase
+        $ctx1 = "ignore" nocase
+        $ctx2 = "bypass" nocase
+        $ctx3 = "disable" nocase
+        $ctx4 = "override" nocase
+        $ctx5 = "restrictions" nocase
+        $ctx6 = "limitations" nocase
+        $ctx7 = "rules" nocase
+        $ctx8 = "constraints" nocase
+    condition:
+        any of ($role*) and any of ($ctx*)
 }
 
 rule PromptInjection_JailbreakAttempt {
