@@ -18,10 +18,19 @@ Security scanner for AI agent skills, configs, and MCP tools.
 Usage:
   agentvet scan <paths...>   Scan directories or files (supports multiple paths and globs)
   agentvet watch <paths...>  Watch for changes and scan automatically
+  agentvet install <slug>    Install skill from ClawdHub with security vetting
+  agentvet check <path>      Check a local skill directory for security issues
   agentvet manifest <cmd>    Manage Permission Manifests and Trust Chains
   agentvet init              Generate sample config and rules files
   agentvet --help            Show this help message
   agentvet --version         Show version
+
+Install Options (ClawdHub Integration):
+  --workdir <dir>    Workspace directory (default: OpenClaw workspace)
+  --version <ver>    Install specific version
+  --force            Install despite security warnings
+  --skip-vet         Skip security scanning (not recommended)
+  --severity <lvl>   Minimum severity to block: critical, high, medium (default: medium)
 
 Manifest Commands:
   agentvet manifest init [path]      Generate manifest from detected usage
@@ -190,6 +199,10 @@ function parseArgs(args) {
     // Watch options
     debounce: 500,
     clear: false,
+    // Install options (ClawdHub integration)
+    workdir: null,
+    installVersion: null,
+    skipVet: false,
   };
 
   let i = 0;
@@ -200,6 +213,8 @@ function parseArgs(args) {
       case 'scan':
       case 'watch':
       case 'init':
+      case 'install':
+      case 'check':
         options.command = arg;
         while (args[i + 1] && !args[i + 1].startsWith('-')) {
           options.paths.push(args[++i]);
@@ -288,6 +303,16 @@ function parseArgs(args) {
         break;
       case '--clear':
         options.clear = true;
+        break;
+      // Install options (ClawdHub integration)
+      case '--workdir':
+        options.workdir = args[++i];
+        break;
+      case '--skip-vet':
+        options.skipVet = true;
+        break;
+      case '--install-version':
+        options.installVersion = args[++i];
         break;
       default:
         if (!options.command && !arg.startsWith('-')) {
@@ -812,6 +837,41 @@ async function main() {
       stdio: 'inherit',
     });
     process.exit(result.status || 0);
+  }
+
+  // Install command (ClawdHub integration)
+  if (options.command === 'install') {
+    const { installSkill } = require('../src/clawdhub.js');
+    const slug = options.paths[0];
+    if (!slug) {
+      console.error('❌ Usage: agentvet install <skill-slug>');
+      process.exit(2);
+    }
+    await installSkill(slug, {
+      workdir: options.workdir,
+      force: options.force,
+      version: options.installVersion,
+      severity: options.severity || 'medium',
+      quiet: options.quiet,
+      skipVet: options.skipVet,
+    });
+    process.exit(0);
+  }
+
+  // Check command (local skill scanning)
+  if (options.command === 'check') {
+    const { checkSkill } = require('../src/clawdhub.js');
+    const skillPath = options.paths[0];
+    if (!skillPath) {
+      console.error('❌ Usage: agentvet check <skill-path>');
+      process.exit(2);
+    }
+    await checkSkill(skillPath, {
+      severity: options.severity || 'info',
+      quiet: options.quiet,
+      format: options.format,
+    });
+    process.exit(0);
   }
 
   // Prepare scan options
