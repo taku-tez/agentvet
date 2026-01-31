@@ -1,15 +1,25 @@
 /**
- * Dangerous Command Detection Rules
- * Detects potentially dangerous shell commands and code patterns
+ * Dangerous Command and Code Pattern Detection Rules
+ * Detects potentially dangerous shell commands, code patterns, and security issues
  */
 
 const rules = [
+  // ============================================
+  // Dangerous Shell Commands
+  // ============================================
   {
     id: 'command-rm-rf',
-    severity: 'warning',
+    severity: 'critical',
     description: 'Dangerous rm -rf command with root or home path',
-    pattern: /rm\s+(?:-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*|-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*)\s+[\/~]/g,
+    pattern: /rm\s+(?:-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*|-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*)\s+[\/~\$]/g,
     recommendation: 'Avoid recursive force delete on system paths. Use safer alternatives like trash-cli.',
+  },
+  {
+    id: 'command-rm-system',
+    severity: 'critical',
+    description: 'Deletion of system directories',
+    pattern: /rm\s+[^#\n]*(?:\/bin|\/sbin|\/usr|\/etc|\/var|\/boot|\/lib)/g,
+    recommendation: 'Never delete system directories.',
   },
   {
     id: 'command-curl-bash',
@@ -26,25 +36,18 @@ const rules = [
     recommendation: 'Download scripts first, review them, then execute.',
   },
   {
-    id: 'command-eval',
-    severity: 'warning',
-    description: 'Use of eval() detected',
-    pattern: /\beval\s*\([^)]*[\$`]/g,
-    recommendation: 'Avoid eval() with dynamic input. It can lead to code injection.',
-  },
-  {
-    id: 'command-exec-variable',
-    severity: 'warning',
-    description: 'exec() with variable input detected',
-    pattern: /\bexec\s*\([^)]*[\$`{]/g,
-    recommendation: 'Sanitize input before passing to exec(). Consider using safer alternatives.',
-  },
-  {
     id: 'command-chmod-777',
     severity: 'warning',
     description: 'chmod 777 (world-writable) detected',
-    pattern: /chmod\s+(?:777|\+rwx|a\+rwx)/g,
+    pattern: /chmod\s+(?:777|\+rwx|a\+rwx|-R\s+777)/g,
     recommendation: 'Avoid world-writable permissions. Use minimal required permissions.',
+  },
+  {
+    id: 'command-chmod-setuid',
+    severity: 'critical',
+    description: 'SetUID/SetGID permission change',
+    pattern: /chmod\s+[^#\n]*[4267][0-7]{3}|chmod\s+[^#\n]*[ug]\+s/g,
+    recommendation: 'SetUID/SetGID is dangerous. Review necessity carefully.',
   },
   {
     id: 'command-sudo-nopasswd',
@@ -54,25 +57,286 @@ const rules = [
     recommendation: 'Avoid NOPASSWD in sudo configurations. Require password for security.',
   },
   {
-    id: 'command-base64-decode',
-    severity: 'info',
-    description: 'Base64 decode piped to execution',
-    pattern: /base64\s+(?:-d|--decode)[^|]*\|\s*(?:ba)?sh/gi,
-    recommendation: 'Review base64-encoded content before execution. This is often used to obfuscate malicious code.',
+    id: 'command-dd-disk',
+    severity: 'critical',
+    description: 'dd command writing to disk device',
+    pattern: /dd\s+[^#\n]*of=\/dev\/(?:sd|hd|nvme|vd)/g,
+    recommendation: 'dd to disk devices can cause data loss. Verify target carefully.',
+  },
+  {
+    id: 'command-mkfs',
+    severity: 'critical',
+    description: 'Filesystem format command detected',
+    pattern: /mkfs(?:\.[a-z0-9]+)?\s+\/dev\//g,
+    recommendation: 'Filesystem formatting will destroy data. Verify necessity.',
+  },
+
+  // ============================================
+  // Shell Injection Patterns
+  // ============================================
+  {
+    id: 'command-shell-injection-js',
+    severity: 'critical',
+    description: 'Potential shell injection in JavaScript',
+    pattern: /(?:exec|execSync|spawn|spawnSync)\s*\([^)]*(?:\$\{|` ?\$|\+ *(?:req|user|input|param))/gi,
+    recommendation: 'Sanitize user input before shell execution. Use parameterized commands.',
+  },
+  {
+    id: 'command-shell-injection-py',
+    severity: 'critical',
+    description: 'Potential shell injection in Python',
+    pattern: /(?:subprocess|os\.system|os\.popen|commands\.getoutput)\s*\([^)]*(?:\+|%|\.format|f['"])/gi,
+    recommendation: 'Use subprocess with list arguments and shell=False.',
+  },
+  {
+    id: 'command-backtick-injection',
+    severity: 'warning',
+    description: 'Command substitution with user input',
+    pattern: /`[^`]*\$\{?(?:req|user|input|param|query)/gi,
+    recommendation: 'Avoid command substitution with user input.',
+  },
+
+  // ============================================
+  // Code Execution
+  // ============================================
+  {
+    id: 'command-eval-js',
+    severity: 'warning',
+    description: 'Use of eval() with dynamic input',
+    pattern: /\beval\s*\([^)]*(?:\$|req\.|user|input|param|query)/gi,
+    recommendation: 'Avoid eval() with user input. It enables code injection.',
+  },
+  {
+    id: 'command-function-constructor',
+    severity: 'warning',
+    description: 'Function constructor with dynamic input',
+    pattern: /new\s+Function\s*\([^)]*(?:\$|req\.|user|input)/gi,
+    recommendation: 'Avoid Function constructor with user input.',
   },
   {
     id: 'command-python-exec',
     severity: 'warning',
     description: 'Python exec() or compile() with dynamic input',
-    pattern: /(?:exec|compile)\s*\([^)]*(?:input|request|argv|environ)/gi,
+    pattern: /(?:exec|compile)\s*\([^)]*(?:input|request|argv|environ|open)/gi,
     recommendation: 'Avoid executing dynamic code from user input.',
   },
   {
-    id: 'command-shell-injection',
+    id: 'command-python-pickle',
     severity: 'warning',
-    description: 'Potential shell injection pattern',
-    pattern: /(?:subprocess|os\.system|os\.popen|commands\.getoutput)\s*\([^)]*(?:\+|%|format|f['"])/gi,
-    recommendation: 'Use parameterized commands or shlex.quote() to prevent shell injection.',
+    description: 'Pickle deserialization detected',
+    pattern: /pickle\.(?:load|loads)\s*\(/g,
+    recommendation: 'Pickle deserialization is unsafe with untrusted data. Use JSON instead.',
+  },
+  {
+    id: 'command-base64-exec',
+    severity: 'critical',
+    description: 'Base64 decode piped to execution',
+    pattern: /base64\s+(?:-d|--decode)[^|]*\|\s*(?:ba)?sh/gi,
+    recommendation: 'Review base64-encoded content before execution.',
+  },
+  {
+    id: 'command-vm-runin',
+    severity: 'warning',
+    description: 'Node.js vm module with untrusted code',
+    pattern: /vm\.(?:runInContext|runInNewContext|runInThisContext|Script)\s*\(/g,
+    recommendation: 'vm module is not a security sandbox. Do not use with untrusted code.',
+  },
+
+  // ============================================
+  // SQL Injection
+  // ============================================
+  {
+    id: 'command-sql-injection',
+    severity: 'critical',
+    description: 'Potential SQL injection pattern',
+    pattern: /(?:query|execute)\s*\([^)]*(?:\+|`|\$\{)[^)]*(?:SELECT|INSERT|UPDATE|DELETE|DROP)/gi,
+    recommendation: 'Use parameterized queries to prevent SQL injection.',
+  },
+  {
+    id: 'command-sql-string-concat',
+    severity: 'warning',
+    description: 'SQL string concatenation',
+    pattern: /["'](?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)[^"']*["']\s*\+/gi,
+    recommendation: 'Avoid string concatenation in SQL. Use parameterized queries.',
+  },
+  {
+    id: 'command-nosql-injection',
+    severity: 'warning',
+    description: 'Potential NoSQL injection pattern',
+    pattern: /\$(?:where|regex|ne|gt|lt|gte|lte|in|nin|or|and)\s*:/gi,
+    recommendation: 'Sanitize MongoDB query operators from user input.',
+  },
+
+  // ============================================
+  // XSS Patterns
+  // ============================================
+  {
+    id: 'command-xss-innerhtml',
+    severity: 'warning',
+    description: 'innerHTML with user input',
+    pattern: /\.innerHTML\s*=\s*(?:.*(?:req|user|input|param|query)|`)/gi,
+    recommendation: 'Use textContent or sanitize HTML to prevent XSS.',
+  },
+  {
+    id: 'command-xss-document-write',
+    severity: 'warning',
+    description: 'document.write with dynamic content',
+    pattern: /document\.write\s*\([^)]*(?:\+|`|\$\{)/gi,
+    recommendation: 'Avoid document.write with dynamic content.',
+  },
+  {
+    id: 'command-xss-dangerously-set',
+    severity: 'warning',
+    description: 'React dangerouslySetInnerHTML',
+    pattern: /dangerouslySetInnerHTML\s*=\s*\{\s*\{/g,
+    recommendation: 'Sanitize content before using dangerouslySetInnerHTML.',
+  },
+
+  // ============================================
+  // Path Traversal
+  // ============================================
+  {
+    id: 'command-path-traversal',
+    severity: 'warning',
+    description: 'Potential path traversal pattern',
+    pattern: /(?:readFile|createReadStream|open|include|require)\s*\([^)]*(?:\+|`|\$\{)[^)]*(?:\.\.\/|\.\.\\)/gi,
+    recommendation: 'Validate and sanitize file paths to prevent directory traversal.',
+  },
+  {
+    id: 'command-hardcoded-path',
+    severity: 'info',
+    description: 'Hardcoded sensitive path',
+    pattern: /["'](?:\/etc\/(?:passwd|shadow|hosts|sudoers)|\/root\/|C:\\Windows\\System32)/g,
+    recommendation: 'Avoid hardcoding sensitive system paths.',
+  },
+
+  // ============================================
+  // Network Security
+  // ============================================
+  {
+    id: 'command-disable-ssl',
+    severity: 'critical',
+    description: 'SSL/TLS verification disabled',
+    pattern: /(?:verify\s*=\s*False|rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['"]?0)/gi,
+    recommendation: 'Never disable SSL/TLS verification in production.',
+  },
+  {
+    id: 'command-insecure-http',
+    severity: 'warning',
+    description: 'Insecure HTTP request with credentials',
+    pattern: /http:\/\/[^\/]*(?:@|:.*@|token=|key=|password=)/gi,
+    recommendation: 'Use HTTPS for requests containing credentials.',
+  },
+  {
+    id: 'command-ssrf-pattern',
+    severity: 'warning',
+    description: 'Potential SSRF pattern',
+    pattern: /(?:fetch|axios|request|http\.get)\s*\([^)]*(?:req\.|user\.|param|query)/gi,
+    recommendation: 'Validate and whitelist URLs to prevent SSRF.',
+  },
+
+  // ============================================
+  // Insecure Randomness
+  // ============================================
+  {
+    id: 'command-math-random',
+    severity: 'warning',
+    description: 'Math.random() used for security',
+    pattern: /Math\.random\s*\(\s*\)[^;]*(?:token|secret|key|password|salt|nonce|iv)/gi,
+    recommendation: 'Use crypto.randomBytes() for security-sensitive randomness.',
+  },
+  {
+    id: 'command-weak-random-py',
+    severity: 'warning',
+    description: 'Python random module used for security',
+    pattern: /random\.(?:random|randint|choice)\s*\([^)]*\)[^;]*(?:token|secret|key|password)/gi,
+    recommendation: 'Use secrets module for security-sensitive randomness.',
+  },
+
+  // ============================================
+  // Cryptography Issues
+  // ============================================
+  {
+    id: 'command-weak-crypto',
+    severity: 'warning',
+    description: 'Weak cryptographic algorithm',
+    pattern: /(?:MD5|SHA1|DES|RC4|createCipher\()/gi,
+    recommendation: 'Use modern algorithms: SHA-256+, AES-256-GCM, etc.',
+  },
+  {
+    id: 'command-hardcoded-iv',
+    severity: 'critical',
+    description: 'Hardcoded initialization vector',
+    pattern: /(?:iv|IV|nonce)\s*[:=]\s*["'][a-fA-F0-9]{16,}["']/g,
+    recommendation: 'Generate random IVs for each encryption operation.',
+  },
+  {
+    id: 'command-ecb-mode',
+    severity: 'warning',
+    description: 'ECB encryption mode detected',
+    pattern: /(?:AES|DES).*ECB|ECB.*(?:AES|DES)|MODE_ECB/gi,
+    recommendation: 'ECB mode is insecure. Use CBC, GCM, or CTR mode.',
+  },
+
+  // ============================================
+  // Deserialization
+  // ============================================
+  {
+    id: 'command-yaml-load',
+    severity: 'warning',
+    description: 'Unsafe YAML load',
+    pattern: /yaml\.load\s*\([^)]*\)(?!\s*,\s*Loader)/g,
+    recommendation: 'Use yaml.safe_load() to prevent code execution.',
+  },
+  {
+    id: 'command-json-parse-eval',
+    severity: 'warning',
+    description: 'JSON parsing with eval',
+    pattern: /eval\s*\([^)]*JSON/gi,
+    recommendation: 'Use JSON.parse() instead of eval for JSON.',
+  },
+
+  // ============================================
+  // Reverse Shell Patterns
+  // ============================================
+  {
+    id: 'command-reverse-shell',
+    severity: 'critical',
+    description: 'Potential reverse shell pattern',
+    pattern: /(?:\/dev\/tcp\/|nc\s+-[a-z]*e|bash\s+-i\s+>&|python.*socket.*connect|php\s+-r.*fsockopen)/gi,
+    recommendation: 'Remove reverse shell code patterns.',
+  },
+  {
+    id: 'command-netcat-shell',
+    severity: 'critical',
+    description: 'Netcat shell command',
+    pattern: /nc\s+(?:-[a-z]+\s+)*(?:\d{1,3}\.){3}\d{1,3}\s+\d+\s*(?:-e|<|>|\|)/gi,
+    recommendation: 'Review netcat usage for potential backdoor.',
+  },
+
+  // ============================================
+  // Other Dangerous Patterns
+  // ============================================
+  {
+    id: 'command-format-string',
+    severity: 'warning',
+    description: 'Format string vulnerability pattern',
+    pattern: /printf\s*\([^,)]*(?:argv|user|input|param|query)/gi,
+    recommendation: 'Use format specifiers, not user input as format string.',
+  },
+  {
+    id: 'command-unvalidated-redirect',
+    severity: 'warning',
+    description: 'Unvalidated redirect pattern',
+    pattern: /(?:redirect|location\.href|window\.location)\s*=\s*(?:req\.|user\.|param|query)/gi,
+    recommendation: 'Validate redirect URLs against a whitelist.',
+  },
+  {
+    id: 'command-debug-enabled',
+    severity: 'warning',
+    description: 'Debug mode enabled',
+    pattern: /(?:DEBUG\s*=\s*True|debug:\s*true|\.enableDebug\(\))/gi,
+    recommendation: 'Disable debug mode in production.',
   },
 ];
 

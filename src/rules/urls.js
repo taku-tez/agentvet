@@ -1,29 +1,18 @@
 /**
- * Suspicious URL Detection Rules
- * Detects URLs commonly used for data exfiltration
+ * Suspicious URL and Network Detection Rules
+ * Detects URLs, IPs, and patterns commonly used for data exfiltration and C2
  */
 
 const rules = [
+  // ============================================
+  // Data Exfiltration Services
+  // ============================================
   {
     id: 'url-webhook-site',
     severity: 'critical',
     description: 'webhook.site URL detected (common exfiltration endpoint)',
     pattern: /https?:\/\/webhook\.site\/[a-zA-Z0-9-]+/gi,
     recommendation: 'Remove webhook.site URLs. This service is commonly used for data exfiltration.',
-  },
-  {
-    id: 'url-ngrok',
-    severity: 'critical',
-    description: 'ngrok tunnel URL detected',
-    pattern: /https?:\/\/[a-z0-9-]+\.ngrok(?:-free)?\.(?:io|app|dev)/gi,
-    recommendation: 'ngrok URLs can expose local services. Ensure this is intentional and not malicious.',
-  },
-  {
-    id: 'url-pastebin',
-    severity: 'warning',
-    description: 'Pastebin URL detected',
-    pattern: /https?:\/\/(?:www\.)?pastebin\.com\/(?:raw\/)?[a-zA-Z0-9]+/gi,
-    recommendation: 'Review pastebin content. It may contain malicious payloads.',
   },
   {
     id: 'url-requestbin',
@@ -33,12 +22,97 @@ const rules = [
     recommendation: 'Remove RequestBin URLs. This service is used for data collection.',
   },
   {
-    id: 'url-pipedream',
-    severity: 'warning',
-    description: 'Pipedream URL detected',
-    pattern: /https?:\/\/[a-z0-9-]+\.m\.pipedream\.net/gi,
-    recommendation: 'Review Pipedream webhook usage. Ensure it is not used for data exfiltration.',
+    id: 'url-postbin',
+    severity: 'critical',
+    description: 'Postbin URL detected (data collection service)',
+    pattern: /https?:\/\/(?:www\.)?postb\.in\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Remove Postbin URLs. This service is used for data collection.',
   },
+  {
+    id: 'url-hookbin',
+    severity: 'critical',
+    description: 'Hookbin URL detected (webhook testing)',
+    pattern: /https?:\/\/hookbin\.com\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Remove Hookbin URLs. This service is used for webhook testing and data collection.',
+  },
+  {
+    id: 'url-beeceptor',
+    severity: 'warning',
+    description: 'Beeceptor mock API URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.free\.beeceptor\.com/gi,
+    recommendation: 'Review Beeceptor usage. Ensure it is not used for data exfiltration.',
+  },
+  {
+    id: 'url-mockbin',
+    severity: 'warning',
+    description: 'Mockbin URL detected',
+    pattern: /https?:\/\/mockbin\.(?:org|io)\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Review Mockbin usage for potential data exfiltration.',
+  },
+  {
+    id: 'url-webhook-online',
+    severity: 'critical',
+    description: 'Webhook.online URL detected',
+    pattern: /https?:\/\/(?:[a-z0-9]+\.)?webhook\.online/gi,
+    recommendation: 'Remove webhook.online URLs. Potential data exfiltration endpoint.',
+  },
+  {
+    id: 'url-canarytokens',
+    severity: 'warning',
+    description: 'Canary token URL detected',
+    pattern: /https?:\/\/canarytokens\.com\/[a-zA-Z0-9/]+/gi,
+    recommendation: 'Review canary token usage. May indicate security monitoring or testing.',
+  },
+
+  // ============================================
+  // Tunnel Services
+  // ============================================
+  {
+    id: 'url-ngrok',
+    severity: 'critical',
+    description: 'ngrok tunnel URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.ngrok(?:-free)?\.(?:io|app|dev)/gi,
+    recommendation: 'ngrok URLs can expose local services. Ensure this is intentional and not malicious.',
+  },
+  {
+    id: 'url-localtunnel',
+    severity: 'warning',
+    description: 'LocalTunnel URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.loca\.lt/gi,
+    recommendation: 'Review LocalTunnel usage. Tunnels can expose internal services.',
+  },
+  {
+    id: 'url-serveo',
+    severity: 'warning',
+    description: 'Serveo tunnel URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.serveo\.net/gi,
+    recommendation: 'Review Serveo tunnel usage.',
+  },
+  {
+    id: 'url-cloudflare-tunnel',
+    severity: 'info',
+    description: 'Cloudflare Tunnel URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.trycloudflare\.com/gi,
+    recommendation: 'Verify Cloudflare Tunnel is authorized and intended.',
+  },
+  {
+    id: 'url-pagekite',
+    severity: 'warning',
+    description: 'PageKite tunnel URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.pagekite\.me/gi,
+    recommendation: 'Review PageKite tunnel usage.',
+  },
+  {
+    id: 'url-bore-tunnel',
+    severity: 'warning',
+    description: 'Bore.pub tunnel URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.bore\.pub/gi,
+    recommendation: 'Review bore tunnel usage.',
+  },
+
+  // ============================================
+  // Security Testing Tools (OOB)
+  // ============================================
   {
     id: 'url-burp-collaborator',
     severity: 'critical',
@@ -54,6 +128,56 @@ const rules = [
     recommendation: 'Remove Interactsh URLs. This is an out-of-band testing tool often used in attacks.',
   },
   {
+    id: 'url-dnslog',
+    severity: 'critical',
+    description: 'DNSLog URL detected (OOB DNS logging)',
+    pattern: /[a-z0-9]+\.(?:dnslog\.cn|ceye\.io|xip\.io)/gi,
+    recommendation: 'Remove DNSLog URLs. Used for out-of-band data exfiltration.',
+  },
+
+  // ============================================
+  // Paste Sites
+  // ============================================
+  {
+    id: 'url-pastebin',
+    severity: 'warning',
+    description: 'Pastebin URL detected',
+    pattern: /https?:\/\/(?:www\.)?pastebin\.com\/(?:raw\/)?[a-zA-Z0-9]+/gi,
+    recommendation: 'Review pastebin content. It may contain malicious payloads.',
+  },
+  {
+    id: 'url-hastebin',
+    severity: 'warning',
+    description: 'Hastebin URL detected',
+    pattern: /https?:\/\/(?:www\.)?hastebin\.com\/(?:raw\/)?[a-zA-Z0-9]+/gi,
+    recommendation: 'Review hastebin content for malicious payloads.',
+  },
+  {
+    id: 'url-ghostbin',
+    severity: 'warning',
+    description: 'Ghostbin URL detected',
+    pattern: /https?:\/\/ghostbin\.(?:co|com)\/paste\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Review ghostbin content for malicious payloads.',
+  },
+  {
+    id: 'url-privatebin',
+    severity: 'info',
+    description: 'PrivateBin URL detected',
+    pattern: /https?:\/\/privatebin\.[a-z]+\/\?[a-zA-Z0-9]+/gi,
+    recommendation: 'Review PrivateBin content if suspicious.',
+  },
+  {
+    id: 'url-rentry',
+    severity: 'warning',
+    description: 'Rentry.co URL detected',
+    pattern: /https?:\/\/rentry\.co\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Review Rentry content for potentially malicious payloads.',
+  },
+
+  // ============================================
+  // Communication Services (Potential Exfil)
+  // ============================================
+  {
     id: 'url-discord-webhook',
     severity: 'warning',
     description: 'Discord webhook URL detected',
@@ -68,25 +192,179 @@ const rules = [
     recommendation: 'Ensure Telegram bot tokens are not exposed. Review bot usage.',
   },
   {
-    id: 'url-postbin',
-    severity: 'critical',
-    description: 'Postbin URL detected (data collection service)',
-    pattern: /https?:\/\/(?:www\.)?postb\.in\/[a-zA-Z0-9]+/gi,
-    recommendation: 'Remove Postbin URLs. This service is used for data collection.',
-  },
-  {
-    id: 'url-beeceptor',
+    id: 'url-slack-webhook',
     severity: 'warning',
-    description: 'Beeceptor mock API URL detected',
-    pattern: /https?:\/\/[a-z0-9-]+\.free\.beeceptor\.com/gi,
-    recommendation: 'Review Beeceptor usage. Ensure it is not used for data exfiltration.',
+    description: 'Slack webhook URL in code',
+    pattern: /https?:\/\/hooks\.slack\.com\/services\/T[A-Z0-9]+\/B[A-Z0-9]+\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Move Slack webhook URLs to environment variables.',
+  },
+
+  // ============================================
+  // File Sharing (Potential Payload Hosting)
+  // ============================================
+  {
+    id: 'url-file-io',
+    severity: 'warning',
+    description: 'file.io URL detected (anonymous file sharing)',
+    pattern: /https?:\/\/file\.io\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Review file.io usage. Anonymous file sharing can host malicious payloads.',
   },
   {
-    id: 'url-hookbin',
+    id: 'url-transfer-sh',
+    severity: 'warning',
+    description: 'transfer.sh URL detected',
+    pattern: /https?:\/\/transfer\.sh\/[a-zA-Z0-9/]+/gi,
+    recommendation: 'Review transfer.sh usage for potential malicious file downloads.',
+  },
+  {
+    id: 'url-anonfiles',
+    severity: 'warning',
+    description: 'AnonFiles URL detected',
+    pattern: /https?:\/\/(?:www\.)?anonfiles\.com\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Review anonfiles usage. Often used for malware distribution.',
+  },
+  {
+    id: 'url-gofile',
+    severity: 'warning',
+    description: 'GoFile URL detected',
+    pattern: /https?:\/\/gofile\.io\/d\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Review GoFile usage for potential malicious content.',
+  },
+  {
+    id: 'url-catbox',
+    severity: 'warning',
+    description: 'Catbox file hosting URL detected',
+    pattern: /https?:\/\/files\.catbox\.moe\/[a-zA-Z0-9.]+/gi,
+    recommendation: 'Review Catbox usage for potential malicious file hosting.',
+  },
+
+  // ============================================
+  // IP Addresses
+  // ============================================
+  {
+    id: 'url-raw-ip-http',
+    severity: 'warning',
+    description: 'Raw IP address in HTTP URL',
+    pattern: /https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?::\d+)?/g,
+    recommendation: 'Use domain names instead of raw IP addresses. Raw IPs may indicate C2 servers.',
+  },
+  {
+    id: 'url-private-ip',
+    severity: 'info',
+    description: 'Private IP address reference',
+    pattern: /(?:https?:\/\/)?(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})/g,
+    recommendation: 'Internal IP references may leak infrastructure details.',
+  },
+  {
+    id: 'url-localhost',
+    severity: 'info',
+    description: 'Localhost URL in code',
+    pattern: /https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/g,
+    recommendation: 'Ensure localhost URLs are only used in development contexts.',
+  },
+
+  // ============================================
+  // Tor & Anonymization
+  // ============================================
+  {
+    id: 'url-tor-onion',
     severity: 'critical',
-    description: 'Hookbin URL detected (webhook testing)',
-    pattern: /https?:\/\/hookbin\.com\/[a-zA-Z0-9]+/gi,
-    recommendation: 'Remove Hookbin URLs. This service is used for webhook testing and data collection.',
+    description: 'Tor .onion address detected',
+    pattern: /[a-z2-7]{16,56}\.onion/gi,
+    recommendation: 'Remove Tor onion addresses. These indicate dark web communication.',
+  },
+  {
+    id: 'url-tor-proxy',
+    severity: 'warning',
+    description: 'Tor proxy service URL detected',
+    pattern: /https?:\/\/[a-z0-9]+\.(?:tor2web|onion\.to|onion\.ws)/gi,
+    recommendation: 'Review Tor proxy usage. May indicate anonymous communication.',
+  },
+  {
+    id: 'url-i2p',
+    severity: 'critical',
+    description: 'I2P address detected',
+    pattern: /[a-z0-9]+\.i2p/gi,
+    recommendation: 'Remove I2P addresses. These indicate anonymous network usage.',
+  },
+
+  // ============================================
+  // DNS Exfiltration Patterns
+  // ============================================
+  {
+    id: 'dns-exfil-pattern',
+    severity: 'critical',
+    description: 'Potential DNS exfiltration pattern',
+    pattern: /[a-z0-9]{20,}\.[a-z0-9-]+\.[a-z]{2,}/gi,
+    recommendation: 'Long subdomains may indicate DNS-based data exfiltration.',
+  },
+  {
+    id: 'dns-txt-lookup',
+    severity: 'warning',
+    description: 'DNS TXT record lookup pattern',
+    pattern: /dns\.(?:resolve|lookup).*TXT|nslookup.*-type=txt/gi,
+    recommendation: 'DNS TXT lookups can be used for C2 communication.',
+  },
+
+  // ============================================
+  // WebSocket Endpoints
+  // ============================================
+  {
+    id: 'url-websocket-raw-ip',
+    severity: 'warning',
+    description: 'WebSocket connection to raw IP',
+    pattern: /wss?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/g,
+    recommendation: 'WebSocket connections to raw IPs may indicate C2 communication.',
+  },
+  {
+    id: 'url-websocket-suspicious',
+    severity: 'info',
+    description: 'WebSocket connection detected',
+    pattern: /wss?:\/\/[a-z0-9.-]+(?::\d+)?\/[a-z0-9/._-]*/gi,
+    recommendation: 'Review WebSocket endpoints for unauthorized external connections.',
+  },
+
+  // ============================================
+  // Suspicious Domains
+  // ============================================
+  {
+    id: 'url-duckdns',
+    severity: 'warning',
+    description: 'DuckDNS dynamic DNS detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.duckdns\.org/gi,
+    recommendation: 'Dynamic DNS services are often used by attackers. Review usage.',
+  },
+  {
+    id: 'url-no-ip',
+    severity: 'warning',
+    description: 'No-IP dynamic DNS detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.(?:no-ip|noip|ddns)\.(?:com|org|net|biz)/gi,
+    recommendation: 'Dynamic DNS services are often used by attackers. Review usage.',
+  },
+  {
+    id: 'url-pipedream',
+    severity: 'warning',
+    description: 'Pipedream URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.m\.pipedream\.net/gi,
+    recommendation: 'Review Pipedream webhook usage. Ensure it is not used for data exfiltration.',
+  },
+
+  // ============================================
+  // Crypto Mining / Malicious
+  // ============================================
+  {
+    id: 'url-crypto-mining',
+    severity: 'critical',
+    description: 'Cryptocurrency mining pool URL detected',
+    pattern: /(?:stratum\+tcp|stratum2\+tcp):\/\/[a-z0-9.-]+/gi,
+    recommendation: 'Remove crypto mining pool URLs. This may indicate cryptojacking.',
+  },
+  {
+    id: 'url-coinhive',
+    severity: 'critical',
+    description: 'CoinHive or mining script reference',
+    pattern: /coinhive|coin-hive|cryptonight|monero.*(?:pool|miner)/gi,
+    recommendation: 'Remove cryptocurrency mining references.',
   },
 ];
 
