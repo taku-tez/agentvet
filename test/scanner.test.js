@@ -431,4 +431,41 @@ secrets/
     }
   });
 
+  // LLM Analysis Tests
+  test('should report LLM status as disabled by default', async () => {
+    setup();
+    try {
+      writeTestFile('SKILL.md', '# My Skill\nThis is a safe skill.');
+      
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false, deps: false });
+      
+      assert.strictEqual(results.llmEnabled, false, 'LLM should be disabled by default');
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should not run LLM when no API key available', async () => {
+    setup();
+    try {
+      writeTestFile('SKILL.md', '# My Skill\nThis is a safe skill.');
+      
+      // Clear any existing API keys
+      const oldOpenAI = process.env.OPENAI_API_KEY;
+      const oldAnthropic = process.env.ANTHROPIC_API_KEY;
+      delete process.env.OPENAI_API_KEY;
+      delete process.env.ANTHROPIC_API_KEY;
+      
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false, deps: false, llm: true });
+      
+      // Restore keys
+      if (oldOpenAI) process.env.OPENAI_API_KEY = oldOpenAI;
+      if (oldAnthropic) process.env.ANTHROPIC_API_KEY = oldAnthropic;
+      
+      assert.strictEqual(results.llmEnabled, false, 'LLM should not be enabled without API key');
+    } finally {
+      cleanup();
+    }
+  });
+
 });
