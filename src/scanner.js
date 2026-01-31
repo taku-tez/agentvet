@@ -288,20 +288,78 @@ class Scanner {
    * Load ignore patterns from .agentvetignore
    */
   loadIgnorePatterns(rootPath) {
-    const ignoreFile = path.join(rootPath, '.agentvetignore');
-    
-    if (fs.existsSync(ignoreFile)) {
+    const patterns = [];
+    const sources = [];
+
+    // Load .agentvetignore (highest priority)
+    const agentvetIgnore = path.join(rootPath, '.agentvetignore');
+    if (fs.existsSync(agentvetIgnore)) {
       try {
-        const content = fs.readFileSync(ignoreFile, 'utf8');
-        this.ignorePatterns = content
+        const content = fs.readFileSync(agentvetIgnore, 'utf8');
+        const lines = content
           .split('\n')
           .map(line => line.trim())
           .filter(line => line && !line.startsWith('#'));
-        this.results.ignoreFile = ignoreFile;
-        this.results.ignorePatterns = this.ignorePatterns.length;
+        patterns.push(...lines);
+        sources.push('.agentvetignore');
       } catch {
         // Ignore read errors
       }
+    }
+
+    // Load .gitignore (if option enabled, default: true)
+    if (this.options.respectGitignore !== false) {
+      const gitignore = path.join(rootPath, '.gitignore');
+      if (fs.existsSync(gitignore)) {
+        try {
+          const content = fs.readFileSync(gitignore, 'utf8');
+          const lines = content
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line && !line.startsWith('#'));
+          patterns.push(...lines);
+          sources.push('.gitignore');
+        } catch {
+          // Ignore read errors
+        }
+      }
+
+      // Also check for nested .gitignore files in subdirectories
+      this.nestedGitignores = new Map();
+    }
+
+    this.ignorePatterns = [...new Set(patterns)]; // Deduplicate
+    
+    if (sources.length > 0) {
+      this.results.ignoreSources = sources;
+      this.results.ignorePatterns = this.ignorePatterns.length;
+    }
+  }
+
+  /**
+   * Load nested .gitignore for a directory
+   */
+  loadNestedGitignore(dirPath) {
+    if (!this.options.respectGitignore !== false) return [];
+    
+    const gitignore = path.join(dirPath, '.gitignore');
+    if (!fs.existsSync(gitignore)) return [];
+    
+    if (this.nestedGitignores?.has(dirPath)) {
+      return this.nestedGitignores.get(dirPath);
+    }
+
+    try {
+      const content = fs.readFileSync(gitignore, 'utf8');
+      const patterns = content
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line && !line.startsWith('#'));
+      
+      this.nestedGitignores?.set(dirPath, patterns);
+      return patterns;
+    } catch {
+      return [];
     }
   }
 
@@ -309,14 +367,35 @@ class Scanner {
    * Check if a file should be ignored
    */
   isIgnored(filePath) {
-    if (this.ignorePatterns.length === 0) return false;
-    
     // Get relative path from root
     const relativePath = path.relative(this.rootPath, filePath);
     
-    for (const pattern of this.ignorePatterns) {
-      if (matchesIgnorePattern(relativePath, pattern)) {
-        return true;
+    // Check root-level ignore patterns
+    if (this.ignorePatterns.length > 0) {
+      for (const pattern of this.ignorePatterns) {
+        if (matchesIgnorePattern(relativePath, pattern)) {
+          return true;
+        }
+      }
+    }
+
+    // Check nested .gitignore patterns
+    if (this.options.respectGitignore !== false && this.nestedGitignores) {
+      const dirPath = path.dirname(filePath);
+      let currentDir = dirPath;
+      
+      // Walk up the directory tree checking for nested .gitignore
+      while (currentDir.startsWith(this.rootPath) && currentDir !== this.rootPath) {
+        const nestedPatterns = this.loadNestedGitignore(currentDir);
+        const relativeToNested = path.relative(currentDir, filePath);
+        
+        for (const pattern of nestedPatterns) {
+          if (matchesIgnorePattern(relativeToNested, pattern)) {
+            return true;
+          }
+        }
+        
+        currentDir = path.dirname(currentDir);
       }
     }
     

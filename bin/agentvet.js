@@ -31,6 +31,7 @@ Options:
   --no-yara          Disable YARA scanning
   --yara-rules <dir> Custom YARA rules directory
   --no-deps          Disable dependency vulnerability scanning
+  --no-gitignore     Don't respect .gitignore patterns
   --deps-deep        Deep dependency analysis (slower, more thorough)
   --rules <file>     Custom rules file (YAML format)
   --llm              Enable LLM-based intent analysis
@@ -168,6 +169,7 @@ function parseArgs(args) {
     yaraRulesDir: null,
     deps: true,
     depsDeep: false,
+    gitignore: true,
     rules: null,
     llm: false,
     llmProvider: null,
@@ -227,6 +229,9 @@ function parseArgs(args) {
         break;
       case '--no-deps':
         options.deps = false;
+        break;
+      case '--no-gitignore':
+        options.gitignore = false;
         break;
       case '--deps-deep':
         options.depsDeep = true;
@@ -789,6 +794,7 @@ async function main() {
       provider: options.llmProvider,
       model: options.llmModel,
     } : undefined,
+    respectGitignore: options.gitignore,
   };
 
   // Watch mode

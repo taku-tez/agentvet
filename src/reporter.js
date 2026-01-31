@@ -57,6 +57,9 @@ function printReport(results, targetPath) {
   if (results.customRulesEnabled) {
     lines.push(`Custom Rules: ${colors.green('enabled')} (${results.customRulesCount} rules)`);
   }
+  if (results.ignoreSources?.length > 0) {
+    lines.push(`Ignore: ${colors.green(results.ignoreSources.join(', '))} (${results.ignorePatterns} patterns)`);
+  }
   lines.push(`Date: ${new Date().toISOString()}`);
   lines.push('');
 
