@@ -32,6 +32,8 @@ Options:
   --yara-rules <dir> Custom YARA rules directory
   --no-deps          Disable dependency vulnerability scanning
   --no-gitignore     Don't respect .gitignore patterns
+  --reputation       Enable URL/IP reputation checking (requires API key)
+  --vt-key <key>     VirusTotal API key (or set VIRUSTOTAL_API_KEY)
   --deps-deep        Deep dependency analysis (slower, more thorough)
   --rules <file>     Custom rules file (YAML format)
   --llm              Enable LLM-based intent analysis
@@ -170,6 +172,8 @@ function parseArgs(args) {
     deps: true,
     depsDeep: false,
     gitignore: true,
+    reputation: false,
+    vtKey: null,
     rules: null,
     llm: false,
     llmProvider: null,
@@ -232,6 +236,13 @@ function parseArgs(args) {
         break;
       case '--no-gitignore':
         options.gitignore = false;
+        break;
+      case '--reputation':
+        options.reputation = true;
+        break;
+      case '--vt-key':
+        options.vtKey = args[++i];
+        options.reputation = true;
         break;
       case '--deps-deep':
         options.depsDeep = true;
@@ -795,6 +806,10 @@ async function main() {
       model: options.llmModel,
     } : undefined,
     respectGitignore: options.gitignore,
+    reputation: options.reputation,
+    reputationOptions: options.vtKey ? {
+      virustotalKey: options.vtKey,
+    } : undefined,
   };
 
   // Watch mode

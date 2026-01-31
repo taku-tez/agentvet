@@ -60,6 +60,9 @@ function printReport(results, targetPath) {
   if (results.ignoreSources?.length > 0) {
     lines.push(`Ignore: ${colors.green(results.ignoreSources.join(', '))} (${results.ignorePatterns} patterns)`);
   }
+  if (results.reputationEnabled) {
+    lines.push(`Reputation: ${colors.green('enabled')} (${results.reputationServices?.join(', ') || 'checking'})`);
+  }
   lines.push(`Date: ${new Date().toISOString()}`);
   lines.push('');
 

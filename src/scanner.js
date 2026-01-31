@@ -92,6 +92,14 @@ try {
   CustomRulesEngine = null;
 }
 
+// URL/IP Reputation checker
+let ReputationChecker;
+try {
+  ({ ReputationChecker } = require('./reputation/index.js'));
+} catch {
+  ReputationChecker = null;
+}
+
 // Files to always scan
 const PRIORITY_FILES = [
   'SKILL.md',
@@ -232,6 +240,21 @@ class Scanner {
         this.customRulesEngine = null;
       }
     }
+
+    // Initialize reputation checker if enabled
+    if (this.options.reputation && ReputationChecker) {
+      try {
+        this.reputationChecker = new ReputationChecker(options.reputationOptions || {});
+        if (this.reputationChecker.isAvailable()) {
+          this.results.reputationEnabled = true;
+          this.results.reputationServices = this.reputationChecker.getAvailableServices();
+        } else {
+          this.reputationChecker = null;
+        }
+      } catch (e) {
+        this.reputationChecker = null;
+      }
+    }
   }
 
   /**
@@ -274,6 +297,11 @@ class Scanner {
     // Run LLM analysis if enabled
     if (this.llmAnalyzer) {
       await this.runLLMAnalysis(resolvedPath);
+    }
+
+    // Run reputation check if enabled
+    if (this.reputationChecker) {
+      await this.runReputationCheck(resolvedPath);
     }
     
     // Auto-fix if requested
@@ -919,6 +947,110 @@ class Scanner {
       // LLM analysis failed, continue without it
       this.results.llmError = e.message;
     }
+  }
+
+  /**
+   * Run URL/IP reputation check
+   */
+  async runReputationCheck(targetPath) {
+    try {
+      // Collect all file contents for URL/IP extraction
+      const files = this.collectFiles(targetPath);
+      let allContent = '';
+      
+      for (const file of files.slice(0, 50)) { // Limit to 50 files
+        try {
+          const content = fs.readFileSync(file, 'utf8');
+          allContent += content + '\n';
+        } catch {
+          // Skip unreadable files
+        }
+      }
+
+      // Run reputation check
+      const repResults = await this.reputationChecker.scanContent(allContent, {
+        maxChecks: this.options.reputationOptions?.maxChecks || 10,
+      });
+
+      // Store results
+      this.results.reputationResults = {
+        checked: repResults.checked,
+        skipped: repResults.skipped,
+        findingsCount: repResults.findings.length,
+      };
+
+      // Add findings
+      for (const finding of repResults.findings) {
+        // Apply severity filter
+        const severityOrder = { critical: 0, warning: 1, info: 2 };
+        const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+        const findingLevel = severityOrder[finding.severity] ?? 2;
+        
+        if (findingLevel > filterLevel) continue;
+
+        this.results.findings.push({
+          ruleId: `reputation-${finding.type}`,
+          severity: finding.severity,
+          description: finding.message,
+          file: targetPath,
+          line: 0,
+          snippet: finding.target,
+          recommendation: `This ${finding.type} has been flagged by ${finding.sources.join(', ')}. Review and remove if not necessary.`,
+          category: 'reputation',
+          source: 'reputation',
+          score: finding.score,
+        });
+
+        this.results.summary[finding.severity]++;
+        this.results.summary.total++;
+      }
+    } catch (e) {
+      this.results.reputationError = e.message;
+    }
+  }
+
+  /**
+   * Collect files from a path
+   */
+  collectFiles(targetPath) {
+    const files = [];
+    const stat = fs.statSync(targetPath);
+    
+    if (stat.isFile()) {
+      return [targetPath];
+    }
+
+    const walk = (dir) => {
+      try {
+        const entries = fs.readdirSync(dir);
+        for (const entry of entries) {
+          if (EXCLUDE_DIRS.includes(entry)) continue;
+          if (EXCLUDE_FILES.includes(entry)) continue;
+          
+          const fullPath = path.join(dir, entry);
+          if (this.isIgnored(fullPath)) continue;
+          
+          try {
+            const entryStat = fs.statSync(fullPath);
+            if (entryStat.isDirectory()) {
+              walk(fullPath);
+            } else if (entryStat.isFile()) {
+              const ext = path.extname(fullPath).toLowerCase();
+              if (!BINARY_EXTENSIONS.includes(ext)) {
+                files.push(fullPath);
+              }
+            }
+          } catch {
+            // Skip inaccessible
+          }
+        }
+      } catch {
+        // Skip inaccessible directories
+      }
+    };
+
+    walk(targetPath);
+    return files;
   }
 }
 
