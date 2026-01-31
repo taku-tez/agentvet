@@ -63,25 +63,30 @@ Analyze the above content and respond with JSON only.`;
 class LLMAnalyzer {
   constructor(options = {}) {
     this.options = {
-      provider: options.provider || 'openai', // 'openai' or 'anthropic'
+      provider: options.provider || 'openai', // 'openai', 'anthropic', or 'openrouter'
       model: options.model || null,
-      apiKey: options.apiKey || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY,
+      apiKey: options.apiKey || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY,
       maxTokens: options.maxTokens || 2000,
       timeout: options.timeout || 30000,
       ...options,
     };
 
-    // Set default model based on provider
-    if (!this.options.model) {
-      this.options.model = this.options.provider === 'anthropic' 
-        ? 'claude-3-5-haiku-20241022' 
-        : 'gpt-4o-mini';
-    }
-
     // Detect provider from API key if not specified
     if (this.options.apiKey?.startsWith('sk-ant-')) {
       this.options.provider = 'anthropic';
-      if (!options.model) this.options.model = 'claude-3-5-haiku-20241022';
+    } else if (this.options.apiKey?.startsWith('sk-or-')) {
+      this.options.provider = 'openrouter';
+    }
+
+    // Set default model based on provider
+    if (!this.options.model) {
+      if (this.options.provider === 'anthropic') {
+        this.options.model = 'claude-3-5-haiku-20241022';
+      } else if (this.options.provider === 'openrouter') {
+        this.options.model = 'anthropic/claude-3-5-haiku';
+      } else {
+        this.options.model = 'gpt-4o-mini';
+      }
     }
   }
 
@@ -231,6 +236,8 @@ class LLMAnalyzer {
 
     if (this.options.provider === 'anthropic') {
       return this.callAnthropic(prompt);
+    } else if (this.options.provider === 'openrouter') {
+      return this.callOpenRouter(prompt);
     } else {
       return this.callOpenAI(prompt);
     }
@@ -260,6 +267,40 @@ class LLMAnalyzer {
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`OpenAI API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    
+    return this.parseResponse(text);
+  }
+
+  /**
+   * Call OpenRouter API
+   */
+  async callOpenRouter(prompt) {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.options.apiKey}`,
+        'HTTP-Referer': 'https://github.com/taku-tez/agentvet',
+        'X-Title': 'AgentVet Security Scanner',
+      },
+      body: JSON.stringify({
+        model: this.options.model,
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: this.options.maxTokens,
+        temperature: 0,
+      }),
+      signal: AbortSignal.timeout(this.options.timeout),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
     }
 
     const data = await response.json();
