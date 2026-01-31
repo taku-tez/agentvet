@@ -91,6 +91,30 @@ YARA works in two modes:
 - **yara-cli**: Uses the native `yara` command (fastest, requires yara installed)
 - **js-fallback**: Pure JavaScript implementation (works everywhere, no dependencies)
 
+### Ignore files
+
+Create `.agentvetignore` in your project root to exclude files:
+
+```gitignore
+# Ignore test fixtures
+test/fixtures/
+
+# Ignore documentation with example patterns
+docs/*.md
+
+# Ignore backup files
+*.bak
+
+# Ignore specific security tool that contains patterns
+scripts/security-scanner.js
+```
+
+Supports gitignore-style patterns:
+- `*` matches anything except `/`
+- `**` matches everything including `/`
+- `/pattern` anchors to root
+- `pattern/` matches directories
+
 ### Exit codes
 
 | Code | Meaning |

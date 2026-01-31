@@ -6,6 +6,52 @@
 const fs = require('fs');
 const path = require('path');
 
+// Simple gitignore-style pattern matcher
+function matchesIgnorePattern(filePath, pattern) {
+  // Normalize paths
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const normalizedPattern = pattern.replace(/\\/g, '/').trim();
+  
+  if (!normalizedPattern || normalizedPattern.startsWith('#')) {
+    return false; // Empty or comment
+  }
+  
+  // Handle negation (!)
+  if (normalizedPattern.startsWith('!')) {
+    return false; // Negation not supported yet
+  }
+  
+  // Convert gitignore pattern to regex
+  let regexPattern = normalizedPattern
+    .replace(/\./g, '\\.') // Escape dots
+    .replace(/\*\*/g, '{{GLOBSTAR}}') // Temp placeholder for **
+    .replace(/\*/g, '[^/]*') // * matches anything except /
+    .replace(/{{GLOBSTAR}}/g, '.*') // ** matches everything
+    .replace(/\?/g, '[^/]'); // ? matches single char
+  
+  // If pattern starts with /, anchor to root
+  if (regexPattern.startsWith('/')) {
+    regexPattern = '^' + regexPattern.slice(1);
+  } else {
+    // Match anywhere in path
+    regexPattern = '(^|/)' + regexPattern;
+  }
+  
+  // If pattern ends with /, match directory
+  if (regexPattern.endsWith('/')) {
+    regexPattern = regexPattern + '.*';
+  } else {
+    regexPattern = regexPattern + '($|/)';
+  }
+  
+  try {
+    const regex = new RegExp(regexPattern);
+    return regex.test(normalizedPath);
+  } catch {
+    return false;
+  }
+}
+
 // Import rules
 const credentials = require('./rules/credentials.js');
 const commands = require('./rules/commands.js');
@@ -101,6 +147,10 @@ class Scanner {
       ...mcp.rules,
     ];
     
+    // Ignore patterns (loaded from .agentvetignore)
+    this.ignorePatterns = [];
+    this.rootPath = null;
+    
     // Initialize YARA scanner if available and enabled
     if (this.options.yara && YaraScanner) {
       try {
@@ -125,6 +175,10 @@ class Scanner {
     }
     
     const stat = fs.statSync(resolvedPath);
+    
+    // Set root path and load ignore patterns
+    this.rootPath = stat.isDirectory() ? resolvedPath : path.dirname(resolvedPath);
+    this.loadIgnorePatterns(this.rootPath);
     
     if (stat.isFile()) {
       this.scanFile(resolvedPath);
@@ -151,6 +205,45 @@ class Scanner {
   }
 
   /**
+   * Load ignore patterns from .agentvetignore
+   */
+  loadIgnorePatterns(rootPath) {
+    const ignoreFile = path.join(rootPath, '.agentvetignore');
+    
+    if (fs.existsSync(ignoreFile)) {
+      try {
+        const content = fs.readFileSync(ignoreFile, 'utf8');
+        this.ignorePatterns = content
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#'));
+        this.results.ignoreFile = ignoreFile;
+        this.results.ignorePatterns = this.ignorePatterns.length;
+      } catch {
+        // Ignore read errors
+      }
+    }
+  }
+
+  /**
+   * Check if a file should be ignored
+   */
+  isIgnored(filePath) {
+    if (this.ignorePatterns.length === 0) return false;
+    
+    // Get relative path from root
+    const relativePath = path.relative(this.rootPath, filePath);
+    
+    for (const pattern of this.ignorePatterns) {
+      if (matchesIgnorePattern(relativePath, pattern)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
    * Walk directory recursively
    */
   walkDirectory(dirPath) {
@@ -169,6 +262,9 @@ class Scanner {
       
       // Skip excluded files
       if (EXCLUDE_FILES.includes(entry)) continue;
+      
+      // Skip ignored paths
+      if (this.isIgnored(fullPath)) continue;
       
       try {
         const stat = fs.statSync(fullPath);
