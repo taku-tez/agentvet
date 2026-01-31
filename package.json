@@ -1,0 +1,44 @@
+{
+  "name": "agentvet",
+  "version": "0.1.0",
+  "description": "Security scanner for AI agent skills, configs, and MCP tools. Vet before you trust.",
+  "main": "src/index.js",
+  "bin": {
+    "agentvet": "./bin/agentvet.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "lint": "eslint src bin",
+    "scan": "node bin/agentvet.js scan ."
+  },
+  "keywords": [
+    "security",
+    "ai-agent",
+    "scanner",
+    "mcp",
+    "skills",
+    "clawdbot",
+    "claude-code",
+    "devin",
+    "supply-chain"
+  ],
+  "author": "AgentVet Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/taku-tez/agentvet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/taku-tez/agentvet/issues"
+  },
+  "homepage": "https://github.com/taku-tez/agentvet#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ]
+}
