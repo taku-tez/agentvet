@@ -28,6 +28,7 @@ A single malicious skill can exfiltrate credentials, install backdoors, or hijac
 - 📁 **Permission Analysis** — Identifies overly permissive file access patterns
 - 🔐 **File Permission Checks** — Warns when sensitive files have insecure permissions
 - 🦠 **YARA Integration** — Advanced threat detection with AI agent-specific YARA rules
+- 📦 **Dependency Scanning** — npm audit and pip-audit integration for vulnerability detection
 
 ---
 
@@ -71,6 +72,22 @@ agentvet scan ./skills --format json --output report.json
 # Quiet mode (summary only)
 agentvet scan ./skills --quiet
 ```
+
+### Dependency scanning
+
+AgentVet scans for vulnerable dependencies using npm audit and pip-audit:
+
+```bash
+# Dependency scanning enabled by default
+agentvet scan ./my-project
+
+# Disable dependency scanning
+agentvet scan ./my-project --no-deps
+```
+
+Supports:
+- **npm**: Scans `package-lock.json` for known vulnerabilities
+- **pip**: Scans `requirements.txt` using pip-audit (requires `pip install pip-audit`)
 
 ### YARA scanning
 
@@ -212,7 +229,7 @@ npx agentvet scan . --quiet || exit 1
 - [x] MCP tool configuration scanning
 - [x] YARA rule integration
 - [ ] LLM-based intent analysis for natural language instructions
-- [ ] Dependency vulnerability scanning (npm audit, pip-audit integration)
+- [x] Dependency vulnerability scanning (npm audit, pip-audit integration)
 - [ ] VS Code extension
 - [ ] Web dashboard
 

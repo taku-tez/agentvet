@@ -26,6 +26,7 @@ Options:
   --severity <lvl>  Minimum severity to report: critical, warning, info (default: info)
   --no-yara         Disable YARA scanning
   --yara-rules <dir> Custom YARA rules directory
+  --no-deps         Disable dependency vulnerability scanning
 
 Examples:
   agentvet scan ./skills
@@ -51,6 +52,7 @@ function parseArgs(args) {
     severity: 'info',
     yara: true,
     yaraRulesDir: null,
+    deps: true,
   };
 
   let i = 0;
@@ -97,6 +99,9 @@ function parseArgs(args) {
       case '--yara-rules':
         options.yaraRulesDir = args[++i];
         break;
+      case '--no-deps':
+        options.deps = false;
+        break;
       default:
         if (!options.command && !arg.startsWith('-')) {
           // Treat as path if no command yet
@@ -133,6 +138,7 @@ async function main() {
         severityFilter: options.severity,
         yara: options.yara,
         yaraOptions: options.yaraRulesDir ? { rulesDir: options.yaraRulesDir } : undefined,
+        deps: options.deps,
       });
 
       // Output results
