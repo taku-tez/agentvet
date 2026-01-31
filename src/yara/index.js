@@ -92,32 +92,42 @@ class YaraScanner {
         }
       }
       
-      // Extract string patterns
+      // Extract condition
+      const conditionMatch = ruleBody.match(/condition:\s*([\s\S]*?)$/);
+      const condition = conditionMatch ? conditionMatch[1].trim() : 'any of them';
+      
+      // Parse condition to extract pattern groups for AND conditions
+      const patternGroups = this.parseCondition(condition);
+      
+      // Extract string patterns with their variable names
       const patterns = [];
+      const patternsByPrefix = {};
       const stringsMatch = ruleBody.match(/strings:\s*([\s\S]*?)(?=condition:|$)/);
       if (stringsMatch) {
-        // Match simple string patterns: $name = "value" or $name = /regex/
-        const stringPatterns = stringsMatch[1].matchAll(/\$\w+\s*=\s*(?:"([^"]+)"(?:\s+nocase)?|\/([^\/]+)\/[i]?)/g);
+        // Match patterns with their variable names
+        const stringPatterns = stringsMatch[1].matchAll(/(\$\w+)\s*=\s*(?:"([^"]+)"(?:\s+nocase)?|\/([^\/]+)\/[i]?)/g);
         for (const sp of stringPatterns) {
-          const strValue = sp[1];
-          const regexValue = sp[2];
+          const varName = sp[1]; // e.g., $env1, $send2
+          const strValue = sp[2];
+          const regexValue = sp[3];
           const isNocase = sp[0].includes('nocase') || sp[0].endsWith('/i');
           
-          if (strValue) {
-            patterns.push({
-              type: 'string',
-              value: strValue,
-              nocase: isNocase,
-            });
-          } else if (regexValue) {
-            try {
-              patterns.push({
-                type: 'regex',
-                value: new RegExp(regexValue, isNocase ? 'gi' : 'g'),
-              });
-            } catch {
-              // Skip invalid regex
-            }
+          // Extract prefix (e.g., $env from $env1)
+          const prefixMatch = varName.match(/^(\$[a-z]+)/i);
+          const prefix = prefixMatch ? prefixMatch[1] : varName;
+          
+          const pattern = {
+            varName,
+            prefix,
+            type: strValue ? 'string' : 'regex',
+            value: strValue || (regexValue ? new RegExp(regexValue, isNocase ? 'gi' : 'g') : null),
+            nocase: isNocase,
+          };
+          
+          if (pattern.value) {
+            patterns.push(pattern);
+            if (!patternsByPrefix[prefix]) patternsByPrefix[prefix] = [];
+            patternsByPrefix[prefix].push(pattern);
           }
         }
       }
@@ -127,6 +137,9 @@ class YaraScanner {
           name: ruleName,
           meta,
           patterns,
+          patternsByPrefix,
+          patternGroups,
+          condition,
           severity: meta.severity || 'warning',
           category: meta.category || 'unknown',
           description: meta.description || ruleName,
@@ -135,6 +148,55 @@ class YaraScanner {
     }
     
     return rules;
+  }
+
+  /**
+   * Parse YARA condition to extract pattern groups
+   * Returns array of groups that must ALL match (AND conditions)
+   * Each group is { prefixes: [...], mode: 'any' | 'all' | 'count' }
+   */
+  parseCondition(condition) {
+    // Handle "any of them" - simple case
+    if (/^\s*any\s+of\s+them\s*$/.test(condition)) {
+      return [{ prefixes: ['*'], mode: 'any', minCount: 1 }];
+    }
+    
+    // Handle "N of them" 
+    const nOfThem = condition.match(/^(\d+)\s+of\s+them$/);
+    if (nOfThem) {
+      return [{ prefixes: ['*'], mode: 'count', minCount: parseInt(nOfThem[1]) }];
+    }
+    
+    // Handle complex conditions - find all "any of ($prefix*)" groups
+    const groups = [];
+    const anyOfRegex = /any\s+of\s+\(\s*\$(\w+)\s*\*?\s*\)/gi;
+    let match;
+    
+    while ((match = anyOfRegex.exec(condition)) !== null) {
+      groups.push({ 
+        prefixes: ['$' + match[1]], 
+        mode: 'any', 
+        minCount: 1 
+      });
+    }
+    
+    // Handle "N of ($prefix*)" patterns
+    const nOfRegex = /(\d+)\s+of\s+\(\s*\$(\w+)\s*\*?\s*\)/gi;
+    while ((match = nOfRegex.exec(condition)) !== null) {
+      groups.push({ 
+        prefixes: ['$' + match[2]], 
+        mode: 'count', 
+        minCount: parseInt(match[1]) 
+      });
+    }
+    
+    // If condition has "and", all groups must match (already the case)
+    // If no groups found, default to "any of them"
+    if (groups.length === 0) {
+      return [{ prefixes: ['*'], mode: 'any', minCount: 1 }];
+    }
+    
+    return groups;
   }
 
   /**
@@ -236,8 +298,9 @@ class YaraScanner {
     }
     
     for (const rule of this.parsedRules) {
-      let matchCount = 0;
-      const matches = [];
+      // Track matches by prefix
+      const matchesByPrefix = {};
+      const allMatches = [];
       
       for (const pattern of rule.patterns) {
         let found = false;
@@ -248,21 +311,27 @@ class YaraScanner {
           
           if (searchContent.includes(searchPattern)) {
             found = true;
-            matches.push(pattern.value);
+            allMatches.push(pattern.value);
           }
         } else if (pattern.type === 'regex') {
           pattern.value.lastIndex = 0;
           if (pattern.value.test(content)) {
             found = true;
-            matches.push(pattern.value.source);
+            allMatches.push(pattern.value.source);
           }
         }
         
-        if (found) matchCount++;
+        if (found) {
+          const prefix = pattern.prefix || pattern.varName || '*';
+          if (!matchesByPrefix[prefix]) matchesByPrefix[prefix] = 0;
+          matchesByPrefix[prefix]++;
+        }
       }
       
-      // Most rules use "any of them" condition, so 1+ match triggers
-      if (matchCount > 0) {
+      // Evaluate condition groups (all groups must match for AND conditions)
+      const conditionMet = this.evaluateCondition(rule, matchesByPrefix, allMatches.length);
+      
+      if (conditionMet) {
         findings.push({
           ruleId: `yara-${rule.name}`,
           ruleName: rule.name,
@@ -270,14 +339,44 @@ class YaraScanner {
           category: rule.category,
           description: rule.description,
           file: filePath,
-          matchCount,
-          matches: matches.slice(0, 3), // Limit shown matches
+          matchCount: allMatches.length,
+          matches: allMatches.slice(0, 3), // Limit shown matches
           source: 'yara-fallback',
         });
       }
     }
     
     return findings;
+  }
+
+  /**
+   * Evaluate if condition is met based on matches
+   */
+  evaluateCondition(rule, matchesByPrefix, totalMatches) {
+    const groups = rule.patternGroups || [{ prefixes: ['*'], mode: 'any', minCount: 1 }];
+    
+    // All groups must be satisfied (AND logic)
+    for (const group of groups) {
+      let groupSatisfied = false;
+      
+      if (group.prefixes.includes('*')) {
+        // "any of them" or "N of them" - check total matches
+        groupSatisfied = totalMatches >= group.minCount;
+      } else {
+        // Check specific prefix groups
+        let prefixMatches = 0;
+        for (const prefix of group.prefixes) {
+          prefixMatches += matchesByPrefix[prefix] || 0;
+        }
+        groupSatisfied = prefixMatches >= group.minCount;
+      }
+      
+      if (!groupSatisfied) {
+        return false; // One group failed, whole condition fails
+      }
+    }
+    
+    return true; // All groups satisfied
   }
 
   /**
