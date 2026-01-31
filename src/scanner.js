@@ -67,6 +67,14 @@ try {
   YaraScanner = null;
 }
 
+// Dependency scanner (optional)
+let DependencyScanner;
+try {
+  ({ DependencyScanner } = require('./deps/index.js'));
+} catch {
+  DependencyScanner = null;
+}
+
 // Files to always scan
 const PRIORITY_FILES = [
   'SKILL.md',
@@ -124,6 +132,7 @@ class Scanner {
       maxFileSize: 1024 * 1024, // 1MB
       checkPermissions: true,
       yara: true, // Enable YARA scanning by default
+      deps: true, // Enable dependency scanning by default
       ...options,
     };
     
@@ -138,6 +147,8 @@ class Scanner {
       scannedFiles: 0,
       fixedIssues: 0,
       yaraEnabled: false,
+      depsEnabled: false,
+      depsResults: null,
     };
     
     this.rules = [
@@ -160,6 +171,16 @@ class Scanner {
       } catch (e) {
         // YARA initialization failed, continue without it
         this.yaraScanner = null;
+      }
+    }
+    
+    // Initialize dependency scanner if available and enabled
+    if (this.options.deps && DependencyScanner) {
+      try {
+        this.depsScanner = new DependencyScanner(options.depsOptions || {});
+        this.results.depsEnabled = true;
+      } catch (e) {
+        this.depsScanner = null;
       }
     }
   }
@@ -194,6 +215,11 @@ class Scanner {
     // Run YARA scan if enabled
     if (this.yaraScanner) {
       await this.runYaraScan(resolvedPath);
+    }
+    
+    // Run dependency scan if enabled
+    if (this.depsScanner) {
+      await this.runDepsScan(resolvedPath);
     }
     
     // Auto-fix if requested
@@ -541,6 +567,57 @@ class Scanner {
       }
     } catch (e) {
       // YARA scan failed, continue without it
+    }
+  }
+
+  /**
+   * Run dependency vulnerability scan
+   */
+  async runDepsScan(targetPath) {
+    if (!this.depsScanner) return;
+    
+    try {
+      const depsResults = await this.depsScanner.scan(targetPath);
+      this.results.depsResults = depsResults;
+      
+      // Add dependency findings to main findings
+      for (const finding of depsResults.findings) {
+        // Map severity to our severity levels
+        let severity;
+        if (finding.severity === 'critical' || finding.severity === 'high') {
+          severity = 'critical';
+        } else if (finding.severity === 'moderate') {
+          severity = 'warning';
+        } else {
+          severity = 'info';
+        }
+        
+        // Apply severity filter
+        const severityOrder = { critical: 0, warning: 1, info: 2 };
+        const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+        const findingLevel = severityOrder[severity] ?? 2;
+        
+        if (findingLevel > filterLevel) continue;
+        
+        this.results.findings.push({
+          ruleId: `deps-${finding.source}-${finding.severity}`,
+          severity,
+          description: `[${finding.source.toUpperCase()}] ${finding.title}`,
+          file: `package: ${finding.package}${finding.version ? '@' + finding.version : ''}`,
+          line: 0,
+          snippet: finding.range || finding.fixVersions || '',
+          recommendation: finding.fixAvailable || 
+            (finding.fixVersions ? `Update to: ${finding.fixVersions}` : 'No fix available'),
+          category: 'dependency',
+          source: finding.source,
+          url: finding.url || '',
+        });
+        
+        this.results.summary[severity]++;
+        this.results.summary.total++;
+      }
+    } catch (e) {
+      // Dependency scan failed, continue without it
     }
   }
 }

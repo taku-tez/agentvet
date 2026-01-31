@@ -403,4 +403,32 @@ secrets/
     }
   });
 
+  // Dependency Scanning Tests
+  test('should report deps status in results', async () => {
+    setup();
+    try {
+      writeTestFile('app.js', 'console.log("ok");');
+      
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false, deps: true });
+      
+      assert.ok(results.depsEnabled !== undefined, 'Should report depsEnabled status');
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should skip deps scan when disabled', async () => {
+    setup();
+    try {
+      writeTestFile('package.json', JSON.stringify({ name: "test", version: "1.0.0" }));
+      
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false, deps: false });
+      
+      assert.strictEqual(results.depsEnabled, false, 'Deps should be disabled');
+      assert.strictEqual(results.depsResults, null, 'No deps results when disabled');
+    } finally {
+      cleanup();
+    }
+  });
+
 });

@@ -37,6 +37,14 @@ function printReport(results, targetPath) {
   } else {
     lines.push(`YARA: ${colors.gray('disabled')}`);
   }
+  if (results.depsEnabled) {
+    const depsInfo = [];
+    if (results.depsResults?.npm?.available) depsInfo.push('npm');
+    if (results.depsResults?.pip?.available) depsInfo.push('pip');
+    lines.push(`Deps: ${colors.green('enabled')} (${depsInfo.join(', ') || 'no package managers found'})`);
+  } else {
+    lines.push(`Deps: ${colors.gray('disabled')}`);
+  }
   lines.push(`Date: ${new Date().toISOString()}`);
   lines.push('');
 
