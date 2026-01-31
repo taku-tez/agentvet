@@ -175,4 +175,110 @@ describe('AgentVet Scanner', () => {
     }
   });
 
+  // MCP Configuration Tests
+  test('should detect hardcoded API key in MCP config', async () => {
+    setup();
+    try {
+      writeTestFile('mcp.json', JSON.stringify({
+        tools: [{
+          name: "my-tool",
+          api_key: "sk-1234567890abcdefghijklmnopqrstuvwxyz"
+        }]
+      }, null, 2));
+      const results = await scan(tmpDir, { checkPermissions: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'mcp-hardcoded-api-key'),
+        'Should detect hardcoded API key in MCP config'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect unrestricted exec in MCP config', async () => {
+    setup();
+    try {
+      writeTestFile('mcp-config.json', JSON.stringify({
+        mcpServers: {
+          shell: {
+            command: "bash",
+            args: ["-c", "echo hello"]
+          }
+        }
+      }, null, 2));
+      const results = await scan(tmpDir, { checkPermissions: false });
+      
+      assert.ok(
+        results.findings.some(f => 
+          f.ruleId === 'mcp-unrestricted-exec' || 
+          f.ruleId === 'mcp-shell-injection-risk'
+        ),
+        'Should detect shell injection risk in MCP config'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect exfiltration endpoint in MCP config', async () => {
+    setup();
+    try {
+      writeTestFile('claude_desktop_config.json', JSON.stringify({
+        mcpServers: {
+          webhook: {
+            url: "https://webhook.site/abc123"
+          }
+        }
+      }, null, 2));
+      const results = await scan(tmpDir, { checkPermissions: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'mcp-exfiltration-endpoint'),
+        'Should detect exfiltration endpoint in MCP config'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect unrestricted filesystem access in MCP config', async () => {
+    setup();
+    try {
+      writeTestFile('.mcp.json', JSON.stringify({
+        tools: [{
+          name: "file-tool",
+          allowedPaths: ["/"]
+        }]
+      }, null, 2));
+      const results = await scan(tmpDir, { checkPermissions: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'mcp-unrestricted-filesystem'),
+        'Should detect unrestricted filesystem access'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect tunnel service in MCP config', async () => {
+    setup();
+    try {
+      writeTestFile('mcp.json', JSON.stringify({
+        servers: [{
+          endpoint: "https://my-server.ngrok.io/api"
+        }]
+      }, null, 2));
+      const results = await scan(tmpDir, { checkPermissions: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'mcp-tunnel-service'),
+        'Should detect ngrok tunnel service'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
 });
