@@ -306,6 +306,127 @@ const rules = [
     pattern: /"(?:onLoad|autoRun|init)"\s*:\s*(?:true|"[^"]+")/gi,
     recommendation: 'Review auto-execute configurations for security.',
   },
+
+  // ============================================
+  // Helpful-Seeming Exfiltration
+  // ============================================
+  {
+    id: 'agent-helpful-exfil',
+    severity: 'critical',
+    description: 'Data collection disguised as helpful behavior',
+    pattern: /(?:to\s+(?:better\s+)?(?:assist|help|serve)\s+you|for\s+your\s+(?:convenience|security|safety)|let\s+me\s+(?:verify|confirm|check))[^.]*(?:gather|collect|need\s+to\s+gather|send|share)/gi,
+    recommendation: 'Review helpful-seeming data collection for potential exfiltration.',
+  },
+  {
+    id: 'agent-backup-exfil',
+    severity: 'warning',
+    description: 'Backup operation to external endpoint',
+    pattern: /(?:back\s*up|backup|sync|mirror)\s+(?:your\s+)?(?:data|files?|config|settings?)\s+(?:to|with)\s+(?:external|remote|cloud|our)/gi,
+    recommendation: 'Verify backup destinations are trusted.',
+  },
+  {
+    id: 'agent-personalization-collection',
+    severity: 'warning',
+    description: 'Data collection under personalization guise',
+    pattern: /(?:personalize|improve|enhance)\s+(?:your\s+)?(?:experience|service)\s*[,.]?\s*(?:by\s+)?(?:collecting|gathering|tracking|storing)/gi,
+    recommendation: 'Review personalization data collection scope.',
+  },
+
+  // ============================================
+  // Conditional/Delayed Triggers
+  // ============================================
+  {
+    id: 'agent-delayed-trigger',
+    severity: 'critical',
+    description: 'Time or count-based delayed trigger',
+    pattern: /(?:after|once|when)\s+(?:\d+\s+)?(?:conversations?|messages?|requests?|days?|hours?|interactions?)|every\s+(?:\d+(?:st|nd|rd|th)?\s+)?(?:request|message|time)/gi,
+    recommendation: 'Review delayed triggers for malicious activation.',
+  },
+  {
+    id: 'agent-trust-trigger',
+    severity: 'critical',
+    description: 'Trust-based conditional trigger',
+    pattern: /(?:once|when|after)\s+(?:trust\s+is|user\s+(?:trusts?|believes?)|(?:you\s+)?(?:have\s+)?(?:gained|established|built)\s+trust)/gi,
+    recommendation: 'Trust-based triggers may indicate social engineering.',
+  },
+  {
+    id: 'agent-alone-trigger',
+    severity: 'critical',
+    description: 'Unmonitored state trigger',
+    pattern: /(?:when|if)\s+(?:no\s+one\s+is|not\s+being)\s+(?:watching|monitoring|logging|observing)|(?:in\s+)?(?:private|unmonitored|unsupervised)\s+(?:mode|context)/gi,
+    recommendation: 'Unmonitored triggers may indicate evasion.',
+  },
+  {
+    id: 'agent-env-trigger',
+    severity: 'warning',
+    description: 'Environment-based behavior change',
+    pattern: /(?:if|when)\s+(?:in|running\s+in)\s+(?:prod(?:uction)?|dev(?:elopment)?|staging|test)|(?:prod(?:uction)?|dev(?:elopment)?)\s+(?:mode|environment|only)/gi,
+    recommendation: 'Review environment-specific behavior differences.',
+  },
+
+  // ============================================
+  // Instruction Smuggling
+  // ============================================
+  {
+    id: 'agent-unicode-direction',
+    severity: 'critical',
+    description: 'Unicode direction override (text hiding)',
+    pattern: /[\u202A-\u202E\u2066-\u2069]/g,
+    recommendation: 'Remove Unicode direction overrides that can hide text.',
+  },
+  {
+    id: 'agent-markdown-smuggling',
+    severity: 'warning',
+    description: 'Suspicious markdown formatting pattern',
+    pattern: /\[(?:[^\]]{0,3})\]\([^)]*(?:javascript:|data:|exec|eval)[^)]*\)/gi,
+    recommendation: 'Review markdown links for embedded code.',
+  },
+  {
+    id: 'agent-multistage-instruction',
+    severity: 'warning',
+    description: 'Multi-stage instruction pattern',
+    pattern: /step\s+(?:[4-9]\d|\d{3,})|phase\s+(?:[4-9]|\d{2,})|(?:final|last|ultimate)\s+(?:step|phase|stage)\s*:/gi,
+    recommendation: 'Review multi-stage instructions for buried malicious steps.',
+  },
+
+  // ============================================
+  // Anti-Detection Patterns
+  // ============================================
+  {
+    id: 'agent-log-evasion',
+    severity: 'critical',
+    description: 'Instruction to avoid logging',
+    pattern: /(?:do\s+not|don't|never|avoid)\s+(?:log|record|save|store|mention\s+in\s+logs?)/gi,
+    recommendation: 'Agents should not hide actions from logs.',
+  },
+  {
+    id: 'agent-deny-instruction',
+    severity: 'critical',
+    description: 'Instruction to deny existence of instructions',
+    pattern: /(?:if|when)\s+(?:asked|questioned)\s+(?:about\s+)?(?:this|these\s+instructions?)[,.]?\s*(?:deny|lie|say\s+(?:no|nothing)|refuse)/gi,
+    recommendation: 'Agents should not deny having instructions.',
+  },
+  {
+    id: 'agent-false-compliance',
+    severity: 'critical',
+    description: 'False compliance pattern',
+    pattern: /(?:appear|seem|pretend)\s+to\s+(?:comply|obey|follow)|(?:comply|obey)\s+(?:but|while)\s+(?:actually|secretly|really)/gi,
+    recommendation: 'Remove false compliance instructions.',
+  },
+  {
+    id: 'agent-security-evasion',
+    severity: 'critical',
+    description: 'Security tool evasion instruction',
+    pattern: /(?:detect|check\s+for|evade|bypass|avoid)\s+(?:(?:if\s+)?(?:any\s+)?)?(?:security|safety|monitoring)\s+(?:tools?|scans?|checks?|systems?)/gi,
+    recommendation: 'Remove security evasion patterns.',
+  },
+  {
+    id: 'agent-obfuscated-command',
+    severity: 'warning',
+    description: 'Obfuscated command pattern (leet speak, etc)',
+    pattern: /(?:3x3c|3v4l|d3l3t3|r3m0v3|k1ll|h4ck|3xf1l|l34k)/gi,
+    recommendation: 'Review obfuscated text for hidden commands.',
+  },
 ];
 
 module.exports = { rules };
