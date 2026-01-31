@@ -24,12 +24,16 @@ Options:
   --quiet           Show summary only
   --fix             Auto-fix permission issues
   --severity <lvl>  Minimum severity to report: critical, warning, info (default: info)
+  --no-yara         Disable YARA scanning
+  --yara-rules <dir> Custom YARA rules directory
 
 Examples:
   agentvet scan ./skills
   agentvet scan . --format json --output report.json
   agentvet scan ~/agent-config --quiet
   agentvet scan . --fix
+  agentvet scan . --no-yara
+  agentvet scan . --yara-rules ./my-rules
 
 Exit codes:
   0 - No critical issues found
@@ -45,6 +49,8 @@ function parseArgs(args) {
     quiet: false,
     fix: false,
     severity: 'info',
+    yara: true,
+    yaraRulesDir: null,
   };
 
   let i = 0;
@@ -85,6 +91,12 @@ function parseArgs(args) {
       case '-s':
         options.severity = args[++i] || 'info';
         break;
+      case '--no-yara':
+        options.yara = false;
+        break;
+      case '--yara-rules':
+        options.yaraRulesDir = args[++i];
+        break;
       default:
         if (!options.command && !arg.startsWith('-')) {
           // Treat as path if no command yet
@@ -119,6 +131,8 @@ async function main() {
       const results = await scan(options.path, {
         fix: options.fix,
         severityFilter: options.severity,
+        yara: options.yara,
+        yaraOptions: options.yaraRulesDir ? { rulesDir: options.yaraRulesDir } : undefined,
       });
 
       // Output results

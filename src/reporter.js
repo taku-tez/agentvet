@@ -32,6 +32,11 @@ function printReport(results, targetPath) {
   lines.push('═'.repeat(50));
   lines.push(`Target: ${targetPath}`);
   lines.push(`Scanned: ${results.scannedFiles} files`);
+  if (results.yaraEnabled) {
+    lines.push(`YARA: ${colors.green('enabled')} (${results.yaraMode})`);
+  } else {
+    lines.push(`YARA: ${colors.gray('disabled')}`);
+  }
   lines.push(`Date: ${new Date().toISOString()}`);
   lines.push('');
 

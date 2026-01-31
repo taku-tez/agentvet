@@ -13,6 +13,14 @@ const urls = require('./rules/urls.js');
 const permissions = require('./rules/permissions.js');
 const mcp = require('./rules/mcp.js');
 
+// YARA scanner (optional)
+let YaraScanner;
+try {
+  ({ YaraScanner } = require('./yara/index.js'));
+} catch {
+  YaraScanner = null;
+}
+
 // Files to always scan
 const PRIORITY_FILES = [
   'SKILL.md',
@@ -69,6 +77,7 @@ class Scanner {
       severityFilter: 'info',
       maxFileSize: 1024 * 1024, // 1MB
       checkPermissions: true,
+      yara: true, // Enable YARA scanning by default
       ...options,
     };
     
@@ -82,6 +91,7 @@ class Scanner {
       },
       scannedFiles: 0,
       fixedIssues: 0,
+      yaraEnabled: false,
     };
     
     this.rules = [
@@ -90,6 +100,18 @@ class Scanner {
       ...urls.rules,
       ...mcp.rules,
     ];
+    
+    // Initialize YARA scanner if available and enabled
+    if (this.options.yara && YaraScanner) {
+      try {
+        this.yaraScanner = new YaraScanner(options.yaraOptions || {});
+        this.results.yaraEnabled = true;
+        this.results.yaraMode = this.yaraScanner.getStatus().mode;
+      } catch (e) {
+        // YARA initialization failed, continue without it
+        this.yaraScanner = null;
+      }
+    }
   }
 
   /**
@@ -113,6 +135,11 @@ class Scanner {
     // Check file permissions for sensitive files
     if (this.options.checkPermissions) {
       this.checkPermissions();
+    }
+    
+    // Run YARA scan if enabled
+    if (this.yaraScanner) {
+      await this.runYaraScan(resolvedPath);
     }
     
     // Auto-fix if requested
@@ -354,6 +381,51 @@ class Scanner {
           finding.fixError = e.message;
         }
       }
+    }
+  }
+
+  /**
+   * Run YARA scan on target path
+   */
+  async runYaraScan(targetPath) {
+    if (!this.yaraScanner) return;
+    
+    try {
+      const stat = fs.statSync(targetPath);
+      let yaraFindings;
+      
+      if (stat.isFile()) {
+        yaraFindings = await this.yaraScanner.scanFile(targetPath);
+      } else {
+        yaraFindings = await this.yaraScanner.scanDirectory(targetPath);
+      }
+      
+      // Add YARA findings to results
+      for (const finding of yaraFindings) {
+        // Apply severity filter
+        const severityOrder = { critical: 0, warning: 1, info: 2 };
+        const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+        const findingLevel = severityOrder[finding.severity] ?? 2;
+        
+        if (findingLevel > filterLevel) continue;
+        
+        this.results.findings.push({
+          ruleId: finding.ruleId,
+          severity: finding.severity,
+          description: finding.description,
+          file: finding.file,
+          line: 0,
+          snippet: finding.matches?.join(', ') || finding.matchedString || '',
+          recommendation: `YARA rule ${finding.ruleName} matched. Review for potential ${finding.category} threat.`,
+          category: finding.category,
+          source: finding.source,
+        });
+        
+        this.results.summary[finding.severity]++;
+        this.results.summary.total++;
+      }
+    } catch (e) {
+      // YARA scan failed, continue without it
     }
   }
 }
