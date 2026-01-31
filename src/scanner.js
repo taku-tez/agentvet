@@ -514,6 +514,9 @@ class Scanner {
       
       // Add YARA findings to results
       for (const finding of yaraFindings) {
+        // Skip ignored files
+        if (this.isIgnored(finding.file)) continue;
+        
         // Apply severity filter
         const severityOrder = { critical: 0, warning: 1, info: 2 };
         const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
