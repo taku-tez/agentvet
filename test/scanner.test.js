@@ -358,4 +358,49 @@ describe('AgentVet Scanner', () => {
     }
   });
 
+  // .agentvetignore Tests
+  test('should respect .agentvetignore patterns', async () => {
+    setup();
+    try {
+      // Create ignore file
+      writeTestFile('.agentvetignore', `
+# Ignore test files
+test-*.js
+secrets/
+*.bak
+`);
+      // Create files that should be ignored
+      writeTestFile('test-config.js', 'const key = "AKIAIOSFODNN7EXAMPLE";');
+      writeTestFile('normal.js', 'const key = "AKIAIOSFODNN7EXAMPLE";');
+      fs.mkdirSync(path.join(tmpDir, 'secrets'), { recursive: true });
+      writeTestFile('secrets/api.js', 'const key = "AKIAIOSFODNN7EXAMPLE";');
+      writeTestFile('backup.bak', 'const key = "AKIAIOSFODNN7EXAMPLE";');
+      
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      // Should only find issues in normal.js
+      const files = results.findings.map(f => path.basename(f.file));
+      assert.ok(files.includes('normal.js'), 'Should scan normal.js');
+      assert.ok(!files.includes('test-config.js'), 'Should ignore test-*.js');
+      assert.ok(!files.includes('api.js'), 'Should ignore secrets/');
+      assert.ok(!files.includes('backup.bak'), 'Should ignore *.bak');
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should report ignore file in results', async () => {
+    setup();
+    try {
+      writeTestFile('.agentvetignore', 'test/\n*.log');
+      writeTestFile('app.js', 'console.log("ok");');
+      
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(results.ignorePatterns === 2, 'Should report number of ignore patterns');
+    } finally {
+      cleanup();
+    }
+  });
+
 });
