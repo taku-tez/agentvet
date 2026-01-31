@@ -8,6 +8,7 @@ const commands = require('./commands.js');
 const urls = require('./urls.js');
 const permissions = require('./permissions.js');
 const mcp = require('./mcp.js');
+const agents = require('./agents.js');
 
 module.exports = {
   credentials,
@@ -15,6 +16,7 @@ module.exports = {
   urls,
   permissions,
   mcp,
+  agents,
   
   // Combined rules array
   all: [
@@ -23,5 +25,6 @@ module.exports = {
     ...urls.rules,
     ...permissions.rules,
     ...mcp.rules,
+    ...agents.rules,
   ],
 };

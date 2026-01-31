@@ -38,7 +38,11 @@
   "files": [
     "bin",
     "src",
+    "yara",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

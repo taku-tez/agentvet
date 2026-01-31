@@ -58,6 +58,7 @@ const commands = require('./rules/commands.js');
 const urls = require('./rules/urls.js');
 const permissions = require('./rules/permissions.js');
 const mcp = require('./rules/mcp.js');
+const agents = require('./rules/agents.js');
 
 // YARA scanner (optional)
 let YaraScanner;
@@ -167,6 +168,7 @@ class Scanner {
       ...commands.rules,
       ...urls.rules,
       ...mcp.rules,
+      ...agents.rules,
     ];
     
     // Ignore patterns (loaded from .agentvetignore)
