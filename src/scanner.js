@@ -11,6 +11,7 @@ const credentials = require('./rules/credentials.js');
 const commands = require('./rules/commands.js');
 const urls = require('./rules/urls.js');
 const permissions = require('./rules/permissions.js');
+const mcp = require('./rules/mcp.js');
 
 // Files to always scan
 const PRIORITY_FILES = [
@@ -20,6 +21,11 @@ const PRIORITY_FILES = [
   'agents.md',
   'mcp.json',
   'mcp-config.json',
+  '.mcp-config.json',
+  '.mcp.json',
+  'claude_desktop_config.json',
+  'cline_mcp_settings.json',
+  '.cursor-mcp.json',
   '.env',
   'config.json',
   'settings.json',
@@ -82,6 +88,7 @@ class Scanner {
       ...credentials.rules,
       ...commands.rules,
       ...urls.rules,
+      ...mcp.rules,
     ];
   }
 

@@ -87,6 +87,9 @@ agentvet scan ./skills --quiet
 | `SKILL.md` / `skill.md` | Clawdbot skill definitions |
 | `AGENTS.md` | Agent instruction files |
 | `mcp.json` / `mcp-config.json` | MCP tool configurations |
+| `claude_desktop_config.json` | Claude Desktop MCP config |
+| `cline_mcp_settings.json` | Cline MCP settings |
+| `.cursor-mcp.json` | Cursor MCP config |
 | `*.js`, `*.ts`, `*.py` | Scripts referenced by skills |
 | `.env`, `config.json` | Configuration files |
 
@@ -98,12 +101,20 @@ agentvet scan ./skills --quiet
 - Hardcoded AWS keys, API tokens, private keys
 - Known malware patterns (YARA-based)
 - Data exfiltration URLs (webhook.site, requestbin, etc.)
+- **MCP**: Unrestricted command execution (`bash`, `sh`)
+- **MCP**: Shell injection risks (`-c` flag patterns)
+- **MCP**: Hardcoded credentials in tool configs
+- **MCP**: Root filesystem access
 
 ### 🟡 Warning
 - Dangerous shell commands (`rm -rf /`, `curl | bash`)
 - Eval/exec patterns in scripts
 - Overly broad file access permissions
 - Insecure file permissions on credential files
+- **MCP**: Tunnel services (ngrok, localtunnel)
+- **MCP**: Raw IP address endpoints
+- **MCP**: Unrestricted filesystem/network access
+- **MCP**: Environment variable exposure
 
 ### 🔵 Info
 - Unusual network endpoints
@@ -145,7 +156,7 @@ npx agentvet scan . --quiet || exit 1
 ## Roadmap
 
 - [x] CLI with basic rules
-- [ ] MCP tool configuration scanning
+- [x] MCP tool configuration scanning
 - [ ] YARA rule integration
 - [ ] LLM-based intent analysis for natural language instructions
 - [ ] Dependency vulnerability scanning (npm audit, pip-audit integration)
