@@ -1,16 +1,40 @@
 /**
  * Dependency Vulnerability Scanner
- * Integrates npm audit and pip-audit for dependency scanning
+ * Integrates npm audit, pip-audit, and additional security checks
  */
 
 const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+// Known malicious packages (supply chain attacks)
+const MALICIOUS_PACKAGES = new Set([
+  // npm
+  'event-stream', 'flatmap-stream', 'ua-parser-js', 'coa', 'rc',
+  // Typosquatting examples
+  'crossenv', 'cross-env.js', 'mongose', 'mariadb', 'mysqljs',
+  'node-fabric', 'fabric-js', 'gruntcli', 'http-proxy.js',
+  'proxy.js', 'shadowsock', 'smb', 'nodesass', 'nodefabric',
+  // Recent attacks
+  'colors', 'faker', // Intentionally corrupted by author
+]);
+
+// Suspicious package patterns
+const SUSPICIOUS_PATTERNS = [
+  /^@[a-z]+-[a-z]+\//, // Typosquatting scoped packages
+  /-js$/, // foo-js instead of foo
+  /^node-/, // node-foo instead of foo
+  /\d{10,}/, // Random numbers (auto-generated names)
+];
+
 class DependencyScanner {
   constructor(options = {}) {
     this.options = {
-      timeout: 60000, // 60 seconds
+      timeout: 120000, // 2 minutes
+      deep: false, // Deep analysis mode
+      checkMalicious: true,
+      checkOutdated: false,
+      checkLicenses: false,
       ...options,
     };
   }
@@ -34,6 +58,9 @@ class DependencyScanner {
     const results = {
       npm: null,
       pip: null,
+      malicious: [],
+      suspicious: [],
+      outdated: [],
       findings: [],
       summary: {
         total: 0,
@@ -51,6 +78,19 @@ class DependencyScanner {
     if (fs.existsSync(packageJsonPath)) {
       results.npm = await this.runNpmAudit(resolvedPath);
       this.processNpmResults(results);
+      
+      // Additional checks
+      if (this.options.checkMalicious || this.options.deep) {
+        await this.checkMaliciousPackages(resolvedPath, results);
+      }
+      
+      if (this.options.checkOutdated || this.options.deep) {
+        await this.checkOutdatedPackages(resolvedPath, results);
+      }
+      
+      if (this.options.deep) {
+        await this.analyzePackageScripts(resolvedPath, results);
+      }
     }
 
     // Check for requirements.txt or pyproject.toml (pip)
@@ -59,6 +99,10 @@ class DependencyScanner {
     if (fs.existsSync(requirementsPath) || fs.existsSync(pyprojectPath)) {
       results.pip = await this.runPipAudit(resolvedPath);
       this.processPipResults(results);
+      
+      if (this.options.deep) {
+        await this.analyzePythonDeps(resolvedPath, results);
+      }
     }
 
     return results;
@@ -72,7 +116,6 @@ class DependencyScanner {
       return { error: 'npm not found', available: false };
     }
 
-    // Check if node_modules exists, if not try to get audit without install
     const nodeModulesPath = path.join(targetPath, 'node_modules');
     const packageLockPath = path.join(targetPath, 'package-lock.json');
     
@@ -80,21 +123,18 @@ class DependencyScanner {
       let result;
       
       if (fs.existsSync(packageLockPath)) {
-        // Use --package-lock-only if lock file exists
         result = execSync('npm audit --json --package-lock-only 2>/dev/null', {
           cwd: targetPath,
           timeout: this.options.timeout,
-          maxBuffer: 10 * 1024 * 1024, // 10MB
+          maxBuffer: 10 * 1024 * 1024,
         });
       } else if (fs.existsSync(nodeModulesPath)) {
-        // Normal audit if node_modules exists
         result = execSync('npm audit --json 2>/dev/null', {
           cwd: targetPath,
           timeout: this.options.timeout,
           maxBuffer: 10 * 1024 * 1024,
         });
       } else {
-        // No lock file or node_modules, skip
         return { 
           available: true, 
           skipped: true, 
@@ -107,7 +147,6 @@ class DependencyScanner {
         data: JSON.parse(result.toString()),
       };
     } catch (error) {
-      // npm audit returns non-zero exit code when vulnerabilities found
       if (error.stdout) {
         try {
           return {
@@ -119,6 +158,245 @@ class DependencyScanner {
         }
       }
       return { available: true, error: error.message };
+    }
+  }
+
+  /**
+   * Check for known malicious packages
+   */
+  async checkMaliciousPackages(targetPath, results) {
+    const packageJsonPath = path.join(targetPath, 'package.json');
+    const packageLockPath = path.join(targetPath, 'package-lock.json');
+
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+      const allDeps = {
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies,
+        ...packageJson.optionalDependencies,
+      };
+
+      // Check direct dependencies
+      for (const [name, version] of Object.entries(allDeps)) {
+        // Check against known malicious packages
+        if (MALICIOUS_PACKAGES.has(name)) {
+          results.malicious.push({
+            package: name,
+            version,
+            reason: 'Known malicious or compromised package',
+          });
+          
+          results.findings.push({
+            source: 'supply-chain',
+            package: name,
+            severity: 'critical',
+            title: `Potentially malicious package: ${name}`,
+            description: 'This package has been flagged as malicious or compromised',
+            recommendation: 'Remove immediately and audit your system',
+          });
+          results.summary.critical++;
+          results.summary.total++;
+        }
+
+        // Check for suspicious patterns
+        for (const pattern of SUSPICIOUS_PATTERNS) {
+          if (pattern.test(name)) {
+            results.suspicious.push({
+              package: name,
+              version,
+              reason: `Matches suspicious pattern: ${pattern}`,
+            });
+          }
+        }
+      }
+
+      // Deep scan: check transitive dependencies in lock file
+      if (this.options.deep && fs.existsSync(packageLockPath)) {
+        const lockFile = JSON.parse(fs.readFileSync(packageLockPath, 'utf-8'));
+        const packages = lockFile.packages || lockFile.dependencies || {};
+        
+        for (const [pkgPath, info] of Object.entries(packages)) {
+          const name = pkgPath.replace(/^node_modules\//, '').split('/').pop();
+          if (name && MALICIOUS_PACKAGES.has(name)) {
+            // Avoid duplicates
+            if (!results.malicious.some(m => m.package === name)) {
+              results.malicious.push({
+                package: name,
+                version: info.version,
+                reason: 'Known malicious package (transitive dependency)',
+                path: pkgPath,
+              });
+              
+              results.findings.push({
+                source: 'supply-chain',
+                package: name,
+                severity: 'critical',
+                title: `Malicious transitive dependency: ${name}`,
+                description: `Found in: ${pkgPath}`,
+                recommendation: 'Update parent package or override resolution',
+              });
+              results.summary.critical++;
+              results.summary.total++;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Ignore parse errors
+    }
+  }
+
+  /**
+   * Check for outdated packages (security risk)
+   */
+  async checkOutdatedPackages(targetPath, results) {
+    if (!this.commandExists('npm')) return;
+
+    try {
+      const output = execSync('npm outdated --json 2>/dev/null || true', {
+        cwd: targetPath,
+        timeout: this.options.timeout,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+
+      const outdated = JSON.parse(output.toString() || '{}');
+      
+      for (const [name, info] of Object.entries(outdated)) {
+        const majorBehind = this.getMajorVersionDiff(info.current, info.latest);
+        
+        if (majorBehind >= 2) {
+          results.outdated.push({
+            package: name,
+            current: info.current,
+            wanted: info.wanted,
+            latest: info.latest,
+            majorsBehind: majorBehind,
+          });
+
+          if (majorBehind >= 3) {
+            results.findings.push({
+              source: 'outdated',
+              package: name,
+              severity: 'warning',
+              title: `Severely outdated: ${name}`,
+              description: `Current: ${info.current}, Latest: ${info.latest} (${majorBehind} major versions behind)`,
+              recommendation: 'Update to latest version for security patches',
+            });
+            results.summary.moderate++;
+            results.summary.total++;
+          }
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Analyze package.json scripts for suspicious commands
+   */
+  async analyzePackageScripts(targetPath, results) {
+    const packageJsonPath = path.join(targetPath, 'package.json');
+    
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+      const scripts = packageJson.scripts || {};
+      
+      const suspiciousPatterns = [
+        { pattern: /curl\s+[^|]+\|\s*(bash|sh)/, reason: 'Downloads and executes remote script' },
+        { pattern: /wget\s+[^;]+;\s*(bash|sh)/, reason: 'Downloads and executes remote script' },
+        { pattern: /eval\s*\(/, reason: 'Uses eval()' },
+        { pattern: /rm\s+-rf\s+[\/~]/, reason: 'Dangerous file deletion' },
+        { pattern: />(\/dev\/tcp|\/dev\/udp)/, reason: 'Network redirection (reverse shell pattern)' },
+        { pattern: /base64\s+-d/, reason: 'Decodes base64 (possible obfuscation)' },
+        { pattern: /\$\(curl/, reason: 'Command substitution with remote fetch' },
+        { pattern: /node\s+-e\s+['"]/, reason: 'Inline node execution' },
+      ];
+
+      for (const [scriptName, scriptCmd] of Object.entries(scripts)) {
+        for (const { pattern, reason } of suspiciousPatterns) {
+          if (pattern.test(scriptCmd)) {
+            results.findings.push({
+              source: 'scripts',
+              package: 'package.json',
+              severity: 'warning',
+              title: `Suspicious npm script: ${scriptName}`,
+              description: reason,
+              evidence: scriptCmd.substring(0, 100),
+              recommendation: 'Review script content for malicious behavior',
+            });
+            results.summary.moderate++;
+            results.summary.total++;
+            break; // One finding per script
+          }
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Analyze Python dependencies
+   */
+  async analyzePythonDeps(targetPath, results) {
+    const requirementsPath = path.join(targetPath, 'requirements.txt');
+    
+    if (!fs.existsSync(requirementsPath)) return;
+
+    try {
+      const content = fs.readFileSync(requirementsPath, 'utf-8');
+      const lines = content.split('\n');
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+
+        // Check for git+http (insecure)
+        if (trimmed.includes('git+http://')) {
+          results.findings.push({
+            source: 'requirements',
+            package: trimmed,
+            severity: 'warning',
+            title: 'Insecure git URL',
+            description: 'Using HTTP instead of HTTPS for git dependency',
+            recommendation: 'Use git+https:// instead',
+          });
+          results.summary.moderate++;
+          results.summary.total++;
+        }
+
+        // Check for unpinned versions
+        if (!trimmed.includes('==') && !trimmed.includes('>=') && !trimmed.includes('@')) {
+          const pkgName = trimmed.split(/[<>=\[]/)[0];
+          if (pkgName && pkgName.length > 0) {
+            results.findings.push({
+              source: 'requirements',
+              package: pkgName,
+              severity: 'info',
+              title: `Unpinned dependency: ${pkgName}`,
+              description: 'Package version is not pinned',
+              recommendation: 'Pin specific version for reproducibility',
+            });
+            // Don't count info as total for this
+          }
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Get major version difference
+   */
+  getMajorVersionDiff(current, latest) {
+    try {
+      const currentMajor = parseInt(current?.split('.')[0]) || 0;
+      const latestMajor = parseInt(latest?.split('.')[0]) || 0;
+      return latestMajor - currentMajor;
+    } catch {
+      return 0;
     }
   }
 
@@ -238,10 +516,10 @@ class DependencyScanner {
     
     if (normalized === 'critical') return 'critical';
     if (normalized === 'high') return 'high';
-    if (normalized === 'moderate' || normalized === 'medium') return 'moderate';
-    if (normalized === 'low') return 'low';
+    if (normalized === 'moderate' || normalized === 'medium' || normalized === 'warning') return 'moderate';
+    if (normalized === 'low' || normalized === 'info') return 'low';
     
-    return 'moderate'; // Default
+    return 'moderate';
   }
 
   /**
