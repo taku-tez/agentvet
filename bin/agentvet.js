@@ -805,9 +805,13 @@ async function main() {
   }
 
   if (options.command === 'manifest') {
-    const { main: manifestMain } = require('./manifest-cmd.js');
-    await manifestMain(options.manifestArgs || []);
-    process.exit(0);
+    // Forward to manifest CLI
+    const { spawnSync } = require('child_process');
+    const manifestPath = require.resolve('./manifest.js');
+    const result = spawnSync(process.execPath, [manifestPath, ...(options.manifestArgs || [])], {
+      stdio: 'inherit',
+    });
+    process.exit(result.status || 0);
   }
 
   // Prepare scan options
