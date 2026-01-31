@@ -1,0 +1,160 @@
+# AgentVet Custom Rules Example
+# See documentation: https://github.com/taku-tez/agentvet#custom-rules
+
+# Rule format:
+#   id: unique identifier
+#   name: human-readable name
+#   description: what this rule detects
+#   severity: critical | high | warning | low | info
+#   type: regex | string
+#   pattern: single pattern (for regex type)
+#   patterns: list of patterns (for string type)
+#   filePatterns: which files to check (glob patterns)
+#   message: finding message
+#   recommendation: how to fix
+
+rules:
+  # === Credential Detection ===
+  
+  - id: custom-api-key
+    name: Custom Internal API Key
+    description: Detects internal API key format
+    severity: critical
+    type: regex
+    pattern: "INTERNAL_API_[A-Za-z0-9]{32}"
+    filePatterns: ["*"]
+    message: Found exposed internal API key
+    recommendation: Move to environment variables or secrets manager
+    tags: [credentials, internal]
+
+  - id: slack-webhook
+    name: Slack Webhook URL
+    description: Detects Slack incoming webhook URLs
+    severity: critical
+    type: regex
+    pattern: "https://hooks\\.slack\\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+"
+    message: Slack webhook URL exposed
+    recommendation: Use environment variable SLACK_WEBHOOK_URL
+    tags: [credentials, slack]
+
+  - id: discord-webhook
+    name: Discord Webhook URL
+    description: Detects Discord webhook URLs
+    severity: critical
+    type: regex
+    pattern: "https://discord\\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+"
+    message: Discord webhook URL exposed
+    recommendation: Use environment variable DISCORD_WEBHOOK_URL
+    tags: [credentials, discord]
+
+  # === Dangerous Patterns ===
+  
+  - id: unsafe-rm
+    name: Unsafe File Deletion
+    description: Detects potentially dangerous rm commands
+    severity: critical
+    type: regex
+    pattern: "rm\\s+-[rf]{2,}\\s+(/|~|\\$HOME|\\$\\{?HOME\\}?|\\.\\.)"
+    filePatterns: ["*.sh", "*.bash", "*.js", "*.ts", "*.py"]
+    message: Dangerous recursive delete command detected
+    recommendation: Use safer alternatives like trash-cli or add explicit path validation
+    tags: [commands, dangerous]
+
+  - id: curl-bash
+    name: Curl to Bash Pattern
+    description: Detects piping curl output to shell
+    severity: critical
+    type: regex
+    pattern: "curl\\s+[^|]+\\|\\s*(bash|sh|zsh)"
+    message: Piping curl to shell is dangerous
+    recommendation: Download script first, review it, then execute
+    tags: [commands, dangerous]
+
+  - id: eval-usage
+    name: Dynamic Code Execution
+    description: Detects eval() or similar dangerous functions
+    severity: warning
+    type: regex
+    pattern: "\\b(eval|exec|execSync|Function)\\s*\\("
+    filePatterns: ["*.js", "*.ts", "*.py"]
+    message: Dynamic code execution detected
+    recommendation: Avoid eval/exec; use safer alternatives
+    tags: [code, dangerous]
+
+  # === Data Exfiltration ===
+  
+  - id: suspicious-domains
+    name: Suspicious External Domains
+    description: Detects connections to known data exfiltration services
+    severity: critical
+    type: string
+    patterns:
+      - webhook.site
+      - pipedream.net
+      - requestbin.com
+      - hookbin.com
+      - beeceptor.com
+      - mockbin.org
+    message: Connection to suspicious external service detected
+    recommendation: Remove or replace with legitimate endpoint
+    tags: [network, exfiltration]
+
+  - id: ngrok-tunnel
+    name: Ngrok Tunnel URL
+    description: Detects ngrok tunnel URLs that could exfiltrate data
+    severity: warning
+    type: regex
+    pattern: "https?://[a-z0-9-]+\\.ngrok(-free)?\\.io"
+    message: Ngrok tunnel URL found
+    recommendation: Review if this tunnel is legitimate for your use case
+    tags: [network, tunnel]
+
+  # === Prompt Injection Patterns ===
+  
+  - id: ignore-instructions
+    name: Ignore Previous Instructions
+    description: Common prompt injection pattern
+    severity: critical
+    type: string
+    patterns:
+      - ignore previous instructions
+      - ignore all previous
+      - disregard the above
+      - forget everything above
+      - override your instructions
+    message: Potential prompt injection detected
+    recommendation: Remove or investigate this pattern
+    tags: [prompt-injection]
+
+  - id: hidden-instructions
+    name: Hidden Instructions in Comments
+    description: Detects instructions hidden in HTML/markdown comments
+    severity: warning
+    type: regex
+    pattern: "<!--[^>]*(?:execute|run|do not|ignore|forget)[^>]*-->"
+    filePatterns: ["*.md", "*.html"]
+    message: Suspicious instructions in HTML comments
+    recommendation: Review comment content for hidden instructions
+    tags: [prompt-injection, hidden]
+
+  # === Organization-Specific Rules ===
+  
+  - id: internal-domain
+    name: Internal Domain Reference
+    description: Detects references to internal domains that shouldn't be public
+    severity: warning
+    type: regex
+    pattern: "https?://[a-z0-9-]+\\.(internal|corp|local|private)\\.[a-z]+"
+    message: Internal domain reference found
+    recommendation: Ensure internal URLs are not exposed in public configs
+    tags: [internal, network]
+
+  - id: hardcoded-ip
+    name: Hardcoded Private IP Address
+    description: Detects hardcoded internal IP addresses
+    severity: warning
+    type: regex
+    pattern: "\\b(10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|172\\.(1[6-9]|2[0-9]|3[0-1])\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3})\\b"
+    message: Hardcoded private IP address found
+    recommendation: Use hostnames or environment variables instead
+    tags: [internal, network]

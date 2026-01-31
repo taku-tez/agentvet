@@ -84,6 +84,14 @@ try {
   LLMAnalyzer = null;
 }
 
+// Custom rules engine
+let CustomRulesEngine;
+try {
+  ({ CustomRulesEngine } = require('./rules/custom.js'));
+} catch {
+  CustomRulesEngine = null;
+}
+
 // Files to always scan
 const PRIORITY_FILES = [
   'SKILL.md',
@@ -209,6 +217,19 @@ class Scanner {
         }
       } catch (e) {
         this.llmAnalyzer = null;
+      }
+    }
+
+    // Initialize custom rules engine if rules file specified
+    if (this.options.customRules && CustomRulesEngine) {
+      try {
+        this.customRulesEngine = new CustomRulesEngine();
+        const rulesLoaded = this.customRulesEngine.loadFromFile(this.options.customRules);
+        this.results.customRulesEnabled = true;
+        this.results.customRulesCount = rulesLoaded;
+      } catch (e) {
+        console.warn(`Custom rules warning: ${e.message}`);
+        this.customRulesEngine = null;
       }
     }
   }
@@ -380,6 +401,26 @@ class Scanner {
         continue;
       }
       this.applyRule(rule, filePath, content);
+    }
+
+    // Apply custom rules if enabled
+    if (this.customRulesEngine) {
+      const customFindings = this.customRulesEngine.scan(filePath, content);
+      for (const finding of customFindings) {
+        this.results.findings.push({
+          ruleId: finding.rule,
+          severity: finding.severity,
+          description: finding.message,
+          file: finding.file,
+          line: finding.line,
+          snippet: finding.evidence,
+          recommendation: finding.recommendation,
+          tags: finding.tags,
+          source: 'custom',
+        });
+        this.results.summary[finding.severity] = (this.results.summary[finding.severity] || 0) + 1;
+        this.results.summary.total++;
+      }
     }
   }
 

@@ -453,14 +453,17 @@ secrets/
       // Clear any existing API keys
       const oldOpenAI = process.env.OPENAI_API_KEY;
       const oldAnthropic = process.env.ANTHROPIC_API_KEY;
+      const oldOpenRouter = process.env.OPENROUTER_API_KEY;
       delete process.env.OPENAI_API_KEY;
       delete process.env.ANTHROPIC_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
       
       const results = await scan(tmpDir, { checkPermissions: false, yara: false, deps: false, llm: true });
       
       // Restore keys
       if (oldOpenAI) process.env.OPENAI_API_KEY = oldOpenAI;
       if (oldAnthropic) process.env.ANTHROPIC_API_KEY = oldAnthropic;
+      if (oldOpenRouter) process.env.OPENROUTER_API_KEY = oldOpenRouter;
       
       assert.strictEqual(results.llmEnabled, false, 'LLM should not be enabled without API key');
     } finally {
