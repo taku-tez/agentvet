@@ -74,14 +74,14 @@ class LLMAnalyzer {
     // Set default model based on provider
     if (!this.options.model) {
       this.options.model = this.options.provider === 'anthropic' 
-        ? 'claude-3-haiku-20240307' 
+        ? 'claude-3-5-haiku-20241022' 
         : 'gpt-4o-mini';
     }
 
     // Detect provider from API key if not specified
     if (this.options.apiKey?.startsWith('sk-ant-')) {
       this.options.provider = 'anthropic';
-      if (!options.model) this.options.model = 'claude-3-haiku-20240307';
+      if (!options.model) this.options.model = 'claude-3-5-haiku-20241022';
     }
   }
 

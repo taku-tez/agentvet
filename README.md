@@ -104,7 +104,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 agentvet scan ./skills --llm --llm-provider anthropic
 
 # Specify model
-agentvet scan ./skills --llm --llm-model gpt-4o
+agentvet scan ./skills --llm --llm-model gpt-4o-mini
 ```
 
 Detects:
