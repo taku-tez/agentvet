@@ -218,7 +218,29 @@ Supports gitignore-style patterns:
 
 ## CI/CD Integration
 
-### GitHub Actions
+### GitHub Actions (Recommended)
+
+Use the official AgentVet action:
+
+```yaml
+name: AgentVet Security Scan
+on: [push, pull_request]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run AgentVet
+        uses: taku-tez/agentvet@v1
+        with:
+          path: '.'
+          severity: 'warning'
+          fail-on-critical: 'true'
+```
+
+### Manual Setup
 
 ```yaml
 name: AgentVet Security Scan
@@ -254,8 +276,9 @@ npx agentvet scan . --quiet || exit 1
 - [x] YARA rule integration
 - [x] LLM-based intent analysis for natural language instructions
 - [x] Dependency vulnerability scanning (npm audit, pip-audit integration)
-- [ ] VS Code extension
-- [ ] Web dashboard
+- [ ] npm publish (install globally with `npm install -g agentvet`)
+- [ ] GitHub Action for CI/CD integration
+- [ ] Additional detection rules
 
 ---
 

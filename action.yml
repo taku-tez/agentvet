@@ -1,0 +1,98 @@
+name: 'AgentVet Security Scan'
+description: 'Scan AI agent skills, MCP tools, and configs for security issues'
+author: 'AgentVet Contributors'
+
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  path:
+    description: 'Path to scan (default: current directory)'
+    required: false
+    default: '.'
+  severity:
+    description: 'Minimum severity to report (critical, warning, info)'
+    required: false
+    default: 'info'
+  yara:
+    description: 'Enable YARA scanning'
+    required: false
+    default: 'true'
+  deps:
+    description: 'Enable dependency scanning'
+    required: false
+    default: 'true'
+  fail-on-critical:
+    description: 'Fail the action if critical issues are found'
+    required: false
+    default: 'true'
+
+outputs:
+  findings:
+    description: 'Number of findings'
+  critical:
+    description: 'Number of critical findings'
+  warnings:
+    description: 'Number of warnings'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Install AgentVet
+      shell: bash
+      run: npm install -g agentvet
+    
+    - name: Run AgentVet Scan
+      id: scan
+      shell: bash
+      run: |
+        set +e
+        
+        ARGS="${{ inputs.path }} --severity ${{ inputs.severity }} --format json --output agentvet-report.json"
+        
+        if [ "${{ inputs.yara }}" = "false" ]; then
+          ARGS="$ARGS --no-yara"
+        fi
+        
+        if [ "${{ inputs.deps }}" = "false" ]; then
+          ARGS="$ARGS --no-deps"
+        fi
+        
+        agentvet scan $ARGS
+        EXIT_CODE=$?
+        
+        if [ -f agentvet-report.json ]; then
+          CRITICAL=$(jq -r '.summary.critical // 0' agentvet-report.json)
+          WARNINGS=$(jq -r '.summary.warning // 0' agentvet-report.json)
+          TOTAL=$(jq -r '.summary.total // 0' agentvet-report.json)
+          
+          echo "findings=$TOTAL" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          
+          echo "## 🛡️ AgentVet Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔴 Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟡 Warning | $WARNINGS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ inputs.fail-on-critical }}" = "true" ] && [ "$EXIT_CODE" != "0" ]; then
+          exit 1
+        fi
+    
+    - name: Upload Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: agentvet-report
+        path: agentvet-report.json
+        if-no-files-found: ignore
