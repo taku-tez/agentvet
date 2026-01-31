@@ -18,9 +18,18 @@ Security scanner for AI agent skills, configs, and MCP tools.
 Usage:
   agentvet scan <paths...>   Scan directories or files (supports multiple paths and globs)
   agentvet watch <paths...>  Watch for changes and scan automatically
+  agentvet manifest <cmd>    Manage Permission Manifests and Trust Chains
   agentvet init              Generate sample config and rules files
   agentvet --help            Show this help message
   agentvet --version         Show version
+
+Manifest Commands:
+  agentvet manifest init [path]      Generate manifest from detected usage
+  agentvet manifest validate [path]  Validate manifest schema
+  agentvet manifest verify [path]    Verify skill matches its manifest
+  agentvet manifest trust [path]     Show trust chain information
+  agentvet manifest audit [path]     Create audit entry
+  agentvet manifest example          Show example manifest
 
 Options:
   --format <type>    Output format: text (default), json, html, markdown, sarif
@@ -195,6 +204,12 @@ function parseArgs(args) {
         while (args[i + 1] && !args[i + 1].startsWith('-')) {
           options.paths.push(args[++i]);
         }
+        break;
+      case 'manifest':
+        options.command = 'manifest';
+        // Pass remaining args to manifest command
+        options.manifestArgs = args.slice(i + 1);
+        i = args.length; // Skip remaining args
         break;
       case '--help':
       case '-h':
@@ -786,6 +801,12 @@ async function main() {
 
   if (options.command === 'init') {
     initCommand();
+    process.exit(0);
+  }
+
+  if (options.command === 'manifest') {
+    const { main: manifestMain } = require('./manifest-cmd.js');
+    await manifestMain(options.manifestArgs || []);
     process.exit(0);
   }
 

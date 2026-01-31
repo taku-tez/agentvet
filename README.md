@@ -298,3 +298,72 @@ MIT © [AgentVet Contributors](https://github.com/taku-tez/agentvet/graphs/contr
 <p align="center">
   <strong>Don't let rogue skills hijack your AI agent. Vet first. 🛡️</strong>
 </p>
+
+## Permission Manifest & Trust Chain
+
+AgentVet supports **Permission Manifests** - declarative files that specify what permissions a skill requires. This enables:
+
+- **Transparency**: Users know exactly what a skill will access before installing
+- **Verification**: AgentVet can compare declared vs actual permissions
+- **Trust Chains**: Track who created, audited, and verified a skill
+
+### Manifest Commands
+
+```bash
+# Generate manifest from detected usage
+agentvet manifest init ./my-skill
+
+# Validate manifest schema
+agentvet manifest validate ./my-skill
+
+# Verify skill matches its manifest (CI-friendly)
+agentvet manifest verify ./my-skill
+
+# Show trust chain
+agentvet manifest trust ./my-skill
+
+# Add audit entry (after code review)
+agentvet manifest audit ./my-skill --auditor "org:mycompany" --notes "Reviewed 2026-01-31"
+
+# Show example manifest
+agentvet manifest example
+```
+
+### Manifest Format
+
+```json
+{
+  "version": "1.0",
+  "name": "my-skill",
+  "permissions": {
+    "exec": ["git", "npm"],
+    "network": ["api.github.com", "*.openai.com"],
+    "files": ["read:./", "write:./output"],
+    "secrets": ["GITHUB_TOKEN"],
+    "elevated": false
+  },
+  "trust": {
+    "author": "github:username",
+    "audits": [
+      {
+        "auditor": "org:3shake",
+        "date": "2026-01-31",
+        "contentHash": "sha256:...",
+        "scope": "full"
+      }
+    ],
+    "verified": true
+  }
+}
+```
+
+### Trust Levels
+
+| Level | Description |
+|-------|-------------|
+| Self | Self-declared, no external audit |
+| Community | Audited by community member |
+| Organization | Audited by trusted organization |
+| Registry | Verified by official registry (ClawdHub) |
+| Official | Official skill from OpenClaw team |
+

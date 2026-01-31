@@ -1,6 +1,6 @@
 {
   "name": "@agentvet/cli",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Security scanner for AI agent skills, configs, and MCP tools. Vet before you trust.",
   "main": "src/index.js",
   "bin": {
@@ -49,5 +49,10 @@
   ],
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "yaml": "^2.8.2"
   }
 }
