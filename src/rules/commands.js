@@ -338,6 +338,101 @@ const rules = [
     pattern: /(?:DEBUG\s*=\s*True|debug:\s*true|\.enableDebug\(\))/gi,
     recommendation: 'Disable debug mode in production.',
   },
+
+  // ============================================
+  // Obfuscation Detection
+  // ============================================
+  {
+    id: 'obfuscation-eval-base64',
+    severity: 'critical',
+    description: 'Base64 decoded string passed to eval',
+    pattern: /eval\s*\(\s*(?:atob|Buffer\.from|base64[_-]?decode)\s*\(/gi,
+    recommendation: 'Remove obfuscated code execution. Review the decoded content.',
+  },
+  {
+    id: 'obfuscation-fromcharcode',
+    severity: 'critical',
+    description: 'String.fromCharCode obfuscation detected',
+    pattern: /String\.fromCharCode\s*\(\s*(?:\d+\s*,?\s*){5,}/gi,
+    recommendation: 'Remove character code obfuscation. Review the decoded content.',
+  },
+  {
+    id: 'obfuscation-hex-escape',
+    severity: 'warning',
+    description: 'Heavy hex escape sequence usage',
+    pattern: /(?:\\x[0-9a-f]{2}){10,}/gi,
+    recommendation: 'Review hex-escaped strings for hidden content.',
+  },
+  {
+    id: 'obfuscation-unicode-escape',
+    severity: 'warning',
+    description: 'Heavy unicode escape sequence usage',
+    pattern: /(?:\\u[0-9a-f]{4}){10,}/gi,
+    recommendation: 'Review unicode-escaped strings for hidden content.',
+  },
+  {
+    id: 'obfuscation-constructor-call',
+    severity: 'critical',
+    description: 'Function constructor for code execution',
+    pattern: /(?:new\s+)?Function\s*\(\s*['"`][\s\S]*?['"`]\s*\)/gi,
+    recommendation: 'Avoid dynamic function construction. Use static code.',
+  },
+  {
+    id: 'obfuscation-array-reverse',
+    severity: 'warning',
+    description: 'Reversed string obfuscation',
+    pattern: /\.split\s*\(\s*['"`]['"`]\s*\)\s*\.reverse\s*\(\s*\)\s*\.join/gi,
+    recommendation: 'Review reversed string patterns for hidden content.',
+  },
+  {
+    id: 'obfuscation-bracket-notation',
+    severity: 'warning',
+    description: 'Heavy bracket notation (potential obfuscation)',
+    pattern: /(?:\[['"]\w+['"]\]){5,}/g,
+    recommendation: 'Review bracket notation for obfuscation.',
+  },
+  {
+    id: 'obfuscation-packed-code',
+    severity: 'critical',
+    description: 'Packed/minified obfuscated code pattern',
+    pattern: /eval\s*\(\s*function\s*\(\s*p\s*,\s*a\s*,\s*c\s*,\s*k\s*,\s*e\s*,/gi,
+    recommendation: 'Remove packed/obfuscated code. Use unpacked source.',
+  },
+  {
+    id: 'obfuscation-jsfuck',
+    severity: 'critical',
+    description: 'JSFuck-style obfuscation detected',
+    pattern: /\(\s*!\s*\[\s*\]\s*\+\s*\[\s*\]\s*\)|(\[\s*\]\s*\[\s*['"!+\[\]]+\s*\])/g,
+    recommendation: 'Remove JSFuck obfuscation. Review the decoded content.',
+  },
+  {
+    id: 'obfuscation-concat-split',
+    severity: 'warning',
+    description: 'Concatenation/split obfuscation pattern',
+    pattern: /(?:['"`][a-z]['"`]\s*\+\s*){10,}/gi,
+    recommendation: 'Review character-by-character concatenation for hidden strings.',
+  },
+  {
+    id: 'obfuscation-computed-property',
+    severity: 'warning',
+    description: 'Computed property access for obfuscation',
+    pattern: /\w+\[\s*['"`](?:e|ev|eva|eval|exe|exec)['"]+\s*\+/gi,
+    recommendation: 'Review computed property access for hidden function calls.',
+  },
+  {
+    id: 'obfuscation-base64-long',
+    severity: 'warning',
+    description: 'Long Base64 string (potential encoded payload)',
+    pattern: /['"`][A-Za-z0-9+\/=]{100,}['"`]/g,
+    recommendation: 'Review long Base64 strings. Decode and inspect content.',
+  },
+  {
+    id: 'obfuscation-double-encoding',
+    severity: 'warning',
+    description: 'Double URL encoding detected',
+    pattern: /%25[0-9a-f]{2}/gi,
+    recommendation: 'Review double-encoded strings for bypass attempts.',
+  },
 ];
 
 module.exports = { rules };
