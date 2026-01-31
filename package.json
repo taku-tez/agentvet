@@ -4,7 +4,7 @@
   "description": "Security scanner for AI agent skills, configs, and MCP tools. Vet before you trust.",
   "main": "src/index.js",
   "bin": {
-    "agentvet": "./bin/agentvet.js"
+    "agentvet": "bin/agentvet.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js",
