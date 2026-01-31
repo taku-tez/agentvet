@@ -61,13 +61,16 @@ function getWorkspace() {
  */
 async function installSkill(slug, options = {}) {
   const {
-    workdir = getWorkspace(),
+    workdir,
     force = false,
     version = null,
     severity = 'medium',
     quiet = false,
     skipVet = false,
   } = options;
+  
+  // Get workspace (handle null/undefined from options)
+  const targetWorkdir = workdir || getWorkspace();
 
   console.log(`🔍 AgentVet: Installing skill "${slug}" with security vetting...\n`);
 
@@ -174,7 +177,7 @@ async function installSkill(slug, options = {}) {
 
     // Step 3: Move to actual workspace
     console.log('📦 Installing to workspace...');
-    const destSkillsDir = path.join(workdir, 'skills');
+    const destSkillsDir = path.join(targetWorkdir, 'skills');
     const destPath = path.join(destSkillsDir, path.basename(actualSkillPath));
 
     fs.mkdirSync(destSkillsDir, { recursive: true });
