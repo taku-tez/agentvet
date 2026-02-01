@@ -260,7 +260,8 @@ const rules = [
     id: 'command-weak-crypto',
     severity: 'warning',
     description: 'Weak cryptographic algorithm',
-    pattern: /(?:MD5|SHA1|DES|RC4|createCipher\()/gi,
+    // Use word boundaries to avoid matching "des" in "description"
+    pattern: /\b(?:MD5|SHA-?1|DES|RC4|3DES|Triple-?DES)\b|createCipher\(/gi,
     recommendation: 'Use modern algorithms: SHA-256+, AES-256-GCM, etc.',
   },
   {

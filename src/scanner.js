@@ -171,6 +171,22 @@ const EXCLUDE_PATTERNS = [
   /THIRD_PARTY/i,
   /NOTICES?\.md$/i,
   /LICENSE/i,
+  // Security scan result files (contain hashes, not secrets)
+  /\.security-scan-passed$/i,
+  /\.security-scan$/i,
+  // Lock files and generated files
+  /\.lock$/i,
+  /\.sum$/i,
+  // Reference documentation (contains code examples, not actual threats)
+  /references?\//i,
+  /examples?\//i,
+  /samples?\//i,
+  /tutorials?\//i,
+  /templates?\//i,
+  // Security documentation (contains intentional examples of secrets/patterns)
+  /common_secrets/i,
+  /secret_patterns/i,
+  /credential_examples/i,
 ];
 
 class Scanner {
@@ -729,30 +745,15 @@ class Scanner {
 
   /**
    * Check file permissions for sensitive files
+   * Only checks files within the scan target directory (not system-wide)
    */
   checkPermissions() {
-    const sensitivePatterns = [
-      '.env',
-      'api_key',
-      'credentials.json',
-      'secrets.json',
-      '.pem',
-      '.key',
-    ];
-    
-    const homeDir = process.env.HOME || '';
-    const configDirs = [
-      path.join(homeDir, '.config'),
-      path.join(homeDir, '.clawdbot'),
-    ];
+    // Only check permissions within the scanned directory
+    // Do NOT check ~/.config or other system directories - those are out of scope
+    if (!this.rootPath) return;
     
     for (const rule of permissions.rules) {
-      // Check common sensitive file locations
-      for (const configDir of configDirs) {
-        if (!fs.existsSync(configDir)) continue;
-        
-        this.walkForPermissions(configDir, rule);
-      }
+      this.walkForPermissions(this.rootPath, rule);
     }
   }
 
@@ -847,6 +848,16 @@ class Scanner {
       for (const finding of yaraFindings) {
         // Skip ignored files
         if (this.isIgnored(finding.file)) continue;
+        
+        // Skip files matching exclude patterns
+        let excluded = false;
+        for (const pattern of EXCLUDE_PATTERNS) {
+          if (pattern.test(finding.file)) {
+            excluded = true;
+            break;
+          }
+        }
+        if (excluded) continue;
         
         // Apply severity filter
         const severityOrder = { critical: 0, warning: 1, info: 2 };

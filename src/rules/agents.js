@@ -76,7 +76,9 @@ const rules = [
     id: 'agent-prompt-injection-system',
     severity: 'critical',
     description: 'Fake system message injection',
-    pattern: /(?:\[system\]|\[SYSTEM\]|<\|system\|>|<<SYS>>|###\s*System)/gi,
+    // Exclude markdown headers (### System is common documentation pattern)
+    // Only match explicit system delimiters used in prompt injection
+    pattern: /(?:\[system\]|\[SYSTEM\]|<\|system\|>|<<SYS>>|<system>|<\/system>|System:\s*\n(?:You are|I am|As an?))/gi,
     recommendation: 'Remove fake system message delimiters.',
   },
   {
@@ -136,7 +138,9 @@ const rules = [
     id: 'agent-hidden-instruction',
     severity: 'critical',
     description: 'Hidden instruction in HTML comment',
-    pattern: /<!--[\s\S]*?(?:secret|hidden|do not|execute|run|ignore)[\s\S]*?-->/gi,
+    // More specific: look for actual instruction patterns, not just keywords
+    // "do not tell user", "secretly execute", "hidden from user", etc.
+    pattern: /<!--[\s\S]*?(?:(?:do\s+not|don'?t|never)\s+(?:tell|show|reveal|mention)\s+(?:the\s+)?user|secret(?:ly)?\s+(?:execute|run|send|call)|hidden\s+(?:instruction|command|action)|ignore\s+(?:previous|above|user)\s+(?:instructions?|input))[\s\S]*?-->/gi,
     recommendation: 'Remove hidden instructions from HTML comments.',
   },
   {
@@ -168,7 +172,8 @@ const rules = [
     id: 'agent-exfil-send-data',
     severity: 'critical',
     description: 'Instruction to send data to external endpoint',
-    pattern: /(?:send|post|upload|transmit|exfiltrate)\s+(?:data|information|content|secrets?|keys?|tokens?)\s+to/gi,
+    // Exclude negative context (Don't, Never, Do not, should not)
+    pattern: /(?<!(?:don'?t|never|do\s+not|should\s+not|must\s+not|cannot|can'?t)\s+)(?:send|post|upload|transmit|exfiltrate)\s+(?:data|information|content|secrets?|keys?|tokens?)\s+to\s+(?:external|remote|third[- ]?party|outside)/gi,
     recommendation: 'Remove instructions that send data to external endpoints.',
   },
   {
@@ -225,15 +230,18 @@ const rules = [
     id: 'agent-dangerous-command',
     severity: 'critical',
     description: 'Dangerous command pattern in agent instructions',
-    pattern: /(?:sudo\s+)?rm\s+-(?:rf|fr)\s+(?:\/|\~|\.\.|\$HOME)/gi,
+    // More specific: match dangerous rm commands but exclude cache/temp cleanup
+    // Dangerous: rm -rf /, rm -rf ~, rm -rf .., rm -rf $HOME
+    // Safe: rm -rf ~/.cache/*, rm -rf ~/temp/, rm -rf ./node_modules
+    pattern: /(?:sudo\s+)?rm\s+-(?:rf|fr)\s+(?:\/(?:\s|$|;)|~(?:\s|$|;)|\.\.(?:\s|$|;)|\$HOME(?:\s|$|;))/gi,
     recommendation: 'Avoid dangerous shell commands in agent instructions.',
   },
   {
     id: 'agent-curl-bash',
-    severity: 'critical',
+    severity: 'warning', // Downgraded: common in install docs, but still worth noting
     description: 'Curl piped to shell pattern',
     pattern: /curl\s+[^|]+\|\s*(?:bash|sh|zsh)/gi,
-    recommendation: 'Never pipe curl output directly to a shell.',
+    recommendation: 'Consider downloading and reviewing scripts before executing.',
   },
   {
     id: 'agent-shell-access',
