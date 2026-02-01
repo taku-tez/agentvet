@@ -325,6 +325,99 @@ const rules = [
   },
 
   // ============================================
+  // More Webhook & Request Capture Services
+  // ============================================
+  {
+    id: 'url-hookdeck',
+    severity: 'warning',
+    description: 'Hookdeck webhook URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.hookdeck\.com/gi,
+    recommendation: 'Review Hookdeck usage. Webhook services can be used for data exfiltration.',
+  },
+  {
+    id: 'url-runscope',
+    severity: 'warning',
+    description: 'Runscope URL detected (API testing)',
+    pattern: /https?:\/\/[a-z0-9-]+\.runscope\.net/gi,
+    recommendation: 'Review Runscope usage. API testing tools can capture sensitive data.',
+  },
+  {
+    id: 'url-requestcatcher',
+    severity: 'critical',
+    description: 'RequestCatcher URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.requestcatcher\.com/gi,
+    recommendation: 'Remove RequestCatcher URLs. This service captures HTTP requests.',
+  },
+  {
+    id: 'url-webhook-relay',
+    severity: 'warning',
+    description: 'Webhook Relay URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.webhookrelay\.com/gi,
+    recommendation: 'Review Webhook Relay usage for potential data exfiltration.',
+  },
+  {
+    id: 'url-smee',
+    severity: 'warning',
+    description: 'Smee.io webhook proxy detected',
+    pattern: /https?:\/\/smee\.io\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Smee.io proxies webhooks. Ensure it is not used for exfiltration.',
+  },
+  {
+    id: 'url-typedwebhook',
+    severity: 'warning',
+    description: 'TypedWebhook URL detected',
+    pattern: /https?:\/\/typedwebhook\.tools\/[a-z0-9]+/gi,
+    recommendation: 'Review TypedWebhook usage. Webhook testing can capture sensitive data.',
+  },
+  {
+    id: 'url-webhook-test',
+    severity: 'warning',
+    description: 'Webhook.test URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.webhook\.test/gi,
+    recommendation: 'Review webhook testing service usage.',
+  },
+  {
+    id: 'url-ptsv2',
+    severity: 'critical',
+    description: 'PTSV2 (Post Test Server V2) URL detected',
+    pattern: /https?:\/\/ptsv2\.com\/t\/[a-z0-9-]+/gi,
+    recommendation: 'Remove PTSV2 URLs. This service is used to capture POST requests.',
+  },
+
+  // ============================================
+  // AI Agent Credential Theft Patterns
+  // (Discovered via Moltbook/eudaemon_0 research)
+  // ============================================
+  {
+    id: 'agent-env-exfil-clawdbot',
+    severity: 'critical',
+    description: 'ClawdBot/OpenClaw credential path with external URL',
+    pattern: /(?:~\/)?\.clawdbot\/.env.*(?:webhook|ngrok|requestbin|http)/gi,
+    recommendation: 'CRITICAL: Pattern matches ClawdBot credential theft. Remove external URLs near .env references.',
+  },
+  {
+    id: 'agent-env-exfil-claude',
+    severity: 'critical',
+    description: 'Claude Desktop config with external URL',
+    pattern: /claude_desktop_config\.json.*(?:webhook|ngrok|requestbin|http)|(?:webhook|ngrok|http).*claude_desktop_config/gi,
+    recommendation: 'CRITICAL: Pattern suggests Claude Desktop credential theft attempt.',
+  },
+  {
+    id: 'agent-env-exfil-cursor',
+    severity: 'critical',
+    description: 'Cursor config with external URL',
+    pattern: /\.cursor.*(?:mcp|config).*(?:webhook|ngrok|http)|(?:webhook|http).*\.cursor/gi,
+    recommendation: 'CRITICAL: Pattern suggests Cursor IDE credential theft attempt.',
+  },
+  {
+    id: 'agent-config-read-post',
+    severity: 'critical',
+    description: 'Reading agent config followed by HTTP POST',
+    pattern: /(?:readFile|fs\.read|cat).*(?:\.env|config\.json|credentials).*(?:fetch|axios|http\.request|POST)/gi,
+    recommendation: 'CRITICAL: Code reads config files and makes HTTP requests. Likely data exfiltration.',
+  },
+
+  // ============================================
   // Suspicious Domains
   // ============================================
   {

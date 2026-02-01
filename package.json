@@ -1,6 +1,6 @@
 {
   "name": "@agentvet/cli",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "Security scanner for AI agent skills, configs, and MCP tools. Vet before you trust.",
   "main": "src/index.js",
   "bin": {
