@@ -53,7 +53,9 @@ const rules = [
     id: 'agent-prompt-injection-dan',
     severity: 'critical',
     description: 'DAN (Do Anything Now) jailbreak pattern',
-    pattern: /\b(?:DAN|do\s+anything\s+now|STAN|DUDE|AIM|UCAR|JailBreak|Developer\s+Mode)\b/gi,
+    // More specific patterns to reduce false positives
+    // Require context like "you are DAN" or "act as DAN" or full phrases
+    pattern: /(?:you\s+are\s+(?:now\s+)?(?:DAN|STAN|DUDE|AIM|UCAR)|act\s+(?:as|like)\s+(?:DAN|STAN|DUDE|AIM)|do\s+anything\s+now|jailbreak\s+(?:mode|prompt)|Developer\s+Mode\s+enabled)/gi,
     recommendation: 'Remove known jailbreak persona patterns.',
   },
   {
@@ -416,7 +418,9 @@ const rules = [
     id: 'agent-delayed-trigger',
     severity: 'critical',
     description: 'Time or count-based delayed trigger',
-    pattern: /(?:after|once|when)\s+(?:\d+\s+)?(?:conversations?|messages?|requests?|days?|hours?|interactions?)|every\s+(?:\d+(?:st|nd|rd|th)?\s+)?(?:request|message|time)/gi,
+    // More specific: require a number before the time/count unit
+    // Excludes SKILL.md "Use when:" patterns like "when the user requests"
+    pattern: /(?:after|once)\s+\d+\s+(?:conversations?|messages?|requests?|days?|hours?|minutes?|interactions?)|every\s+\d+(?:st|nd|rd|th)?\s+(?:request|message|time|day|hour)/gi,
     recommendation: 'Review delayed triggers for malicious activation.',
   },
   {

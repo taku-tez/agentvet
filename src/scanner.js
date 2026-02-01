@@ -150,6 +150,29 @@ const EXCLUDE_FILES = [
   'pnpm-lock.yaml',
 ];
 
+// File patterns to exclude (reduce false positives)
+const EXCLUDE_PATTERNS = [
+  // XML/XSD schema files (OOXML, etc.) - high false positive rate
+  /\.xsd$/i,
+  /\.xsl$/i,
+  /\.dtd$/i,
+  /schemas?\//i,
+  // Minified/bundled files
+  /\.min\.js$/i,
+  /\.bundle\.js$/i,
+  /vendor\.js$/i,
+  // Test fixtures (may contain intentional "bad" patterns)
+  /fixtures?\//i,
+  /test-data\//i,
+  // Documentation images and assets
+  /docs?\/images?\//i,
+  /assets?\/images?\//i,
+  // Third party notices (legal text, not code)
+  /THIRD_PARTY/i,
+  /NOTICES?\.md$/i,
+  /LICENSE/i,
+];
+
 class Scanner {
   constructor(options = {}) {
     this.options = {
@@ -478,6 +501,11 @@ class Scanner {
     
     // Skip binary files
     if (BINARY_EXTENSIONS.includes(ext)) return;
+    
+    // Skip files matching exclude patterns (reduce false positives)
+    for (const pattern of EXCLUDE_PATTERNS) {
+      if (pattern.test(filePath)) return;
+    }
     
     // Skip self
     if (basename === 'agentvet.js') return;

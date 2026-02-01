@@ -574,8 +574,9 @@ const rules = [
     id: 'credential-mistral-key',
     severity: 'critical',
     description: 'Mistral AI API key detected',
-    pattern: /[a-zA-Z0-9]{32}/g,
-    recommendation: 'Use MISTRAL_API_KEY environment variable (note: generic 32-char)',
+    // Require context: variable name containing 'mistral' or 'api_key' near the value
+    pattern: /(?:mistral|MISTRAL)[_\s-]*(?:api[_\s-]*)?(?:key|token)['":\s=]+['"]?([a-zA-Z0-9]{32,})['"]?/gi,
+    recommendation: 'Use MISTRAL_API_KEY environment variable',
   },
 ];
 
