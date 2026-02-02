@@ -227,17 +227,17 @@ class YaraScanner {
       
       const yara = spawn('yara', args);
       let stdout = '';
-      let stderr = '';
+      let _stderr = '';
       
       yara.stdout.on('data', (data) => {
         stdout += data.toString();
       });
       
       yara.stderr.on('data', (data) => {
-        stderr += data.toString();
+        _stderr += data.toString();
       });
       
-      yara.on('close', (code) => {
+      yara.on('close', (_code) => {
         if (stdout.trim()) {
           // Parse yara output
           const lines = stdout.trim().split('\n');

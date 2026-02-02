@@ -102,7 +102,7 @@ try {
 }
 
 // Files to always scan
-const PRIORITY_FILES = [
+const _PRIORITY_FILES = [
   'SKILL.md',
   'skill.md',
   'AGENTS.md',

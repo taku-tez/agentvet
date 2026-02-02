@@ -7,8 +7,8 @@ function parse(content) {
   const lines = content.split('\n');
   const result = {};
   const stack = [{ obj: result, indent: -1 }];
-  const currentArray = null;
-  const currentArrayIndent = -1;
+  const _currentArray = null;
+  const _currentArrayIndent = -1;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];

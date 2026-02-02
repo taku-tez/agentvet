@@ -254,7 +254,7 @@ function copyDirectory(src, dest) {
  */
 async function checkSkill(skillPath, options = {}) {
   const {
-    severity = 'info',
+    severity: _severity = 'info',
     quiet = false,
     format = 'text',
   } = options;

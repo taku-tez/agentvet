@@ -51,6 +51,13 @@ module.exports = [
       'quotes': ['warn', 'single', { avoidEscape: true }],
     },
   },
+  // ESM modules in manifest/
+  {
+    files: ['src/manifest/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+    },
+  },
   {
     ignores: [
       'node_modules/**',

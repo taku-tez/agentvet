@@ -4,7 +4,7 @@
  * Permission Manifest と Trust Chain の管理コマンド
  */
 
-const fs = require('fs');
+const _fs = require('fs');
 const path = require('path');
 
 // ESM modules need dynamic import
