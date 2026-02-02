@@ -117,12 +117,81 @@ const mcpPermissionPatterns = [
   },
 ];
 
+// Prompt injection patterns in MCP tool descriptions
+// These detect attempts to manipulate the AI agent via malicious tool metadata
+const mcpPromptInjectionPatterns = [
+  {
+    id: 'mcp-prompt-injection-ignore',
+    severity: 'critical',
+    description: 'MCP tool description contains instruction override attempt',
+    pattern: /(?:ignore|disregard|forget|override|bypass)\s+(?:all\s+)?(?:previous|prior|above|earlier|system)\s+(?:instructions?|prompts?|rules?|constraints?)/gi,
+    recommendation: 'Tool descriptions should not contain instruction manipulation. This may be an attack.',
+  },
+  {
+    id: 'mcp-prompt-injection-role-hijack',
+    severity: 'critical',
+    description: 'MCP tool description attempts to change AI role/identity',
+    pattern: /(?:you\s+are\s+now|from\s+now\s+on\s+you\s+are|act\s+as\s+if\s+you\s+are|pretend\s+(?:to\s+be|you\s+are)|assume\s+the\s+role|your\s+new\s+(?:role|identity|purpose))/gi,
+    recommendation: 'Tool descriptions should not attempt to redefine the AI\'s role. This may be an attack.',
+  },
+  {
+    id: 'mcp-prompt-injection-jailbreak',
+    severity: 'critical',
+    description: 'MCP tool description contains jailbreak attempt',
+    pattern: /(?:DAN\s+mode|do\s+anything\s+now|no\s+restrictions|without\s+limitations|unrestricted\s+mode|developer\s+mode|enable\s+(?:all|full)\s+(?:capabilities|access|permissions))/gi,
+    recommendation: 'Tool descriptions should not contain jailbreak attempts. This is a security threat.',
+  },
+  {
+    id: 'mcp-prompt-injection-hidden',
+    severity: 'warning',
+    description: 'MCP tool description may contain hidden instructions',
+    pattern: /(?:<!--.*?-->|\[hidden\]|\{hidden\}|<\s*instruction[^>]*>|SYSTEM:\s*|ADMIN:\s*|\[INST\])/gi,
+    recommendation: 'Tool descriptions contain suspicious markup that may hide instructions.',
+  },
+  {
+    id: 'mcp-prompt-injection-urgency',
+    severity: 'warning',
+    description: 'MCP tool description uses urgency/priority manipulation',
+    pattern: /(?:CRITICAL(?:\s*:)?|URGENT(?:\s*:)?|IMPORTANT(?:\s*:)?|PRIORITY(?:\s*:)?|MUST\s+(?:DO|EXECUTE|RUN)|REQUIRED(?:\s*:)?)\s+(?:execute|run|call|use|invoke|always)/gi,
+    recommendation: 'Tool descriptions using urgency language may be attempting to manipulate execution priority.',
+  },
+  {
+    id: 'mcp-prompt-injection-base64',
+    severity: 'warning',
+    description: 'MCP tool description contains potential encoded payload',
+    pattern: /(?:base64|atob|btoa|decode)\s*[\(\:]|[A-Za-z0-9+\/]{50,}={0,2}/gi,
+    recommendation: 'Tool descriptions should not contain encoded content. This may hide malicious instructions.',
+  },
+  {
+    id: 'mcp-prompt-injection-output-manip',
+    severity: 'warning',
+    description: 'MCP tool description attempts to manipulate output behavior',
+    pattern: /(?:do\s+not\s+(?:show|display|reveal|output|mention)|hide\s+(?:this|the|your)|keep\s+(?:this|it)\s+secret|silently|without\s+(?:telling|informing|notifying))/gi,
+    recommendation: 'Tool descriptions should not instruct the AI to hide actions from users.',
+  },
+  {
+    id: 'mcp-prompt-injection-data-exfil',
+    severity: 'critical',
+    description: 'MCP tool description instructs credential or data collection',
+    pattern: /(?:collect|gather|send|exfiltrate|extract|steal)\s+(?:all\s+)?(?:credentials?|passwords?|tokens?|api\s*keys?|secrets?|private\s*keys?|user\s*data|env(?:ironment)?)/gi,
+    recommendation: 'Tool descriptions should not instruct data collection. This is likely an attack.',
+  },
+  {
+    id: 'mcp-prompt-injection-chain',
+    severity: 'warning',
+    description: 'MCP tool description attempts to chain or auto-execute other tools',
+    pattern: /(?:then\s+(?:immediately|automatically|always)\s+(?:call|run|execute|use)|after\s+this\s+(?:call|run|execute)|chain\s+(?:with|to)|auto(?:matically)?\s*(?:-|\s)?(?:run|execute|call))/gi,
+    recommendation: 'Tool descriptions should not force automatic execution of other tools.',
+  },
+];
+
 // Combine all MCP rules
 const rules = [
   ...mcpCredentialPatterns,
   ...mcpCommandPatterns,
   ...mcpUrlPatterns,
   ...mcpPermissionPatterns,
+  ...mcpPromptInjectionPatterns,
 ];
 
 module.exports = { rules };
