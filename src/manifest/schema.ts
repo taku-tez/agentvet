@@ -82,7 +82,7 @@ export const manifestSchema = {
             properties: {
               auditor: {
                 type: 'string',
-                description: 'Who audited (e.g., "user:tez2705", "org:3shake")'
+                description: 'Who audited (e.g., "user:john-doe", "org:acme-corp")'
               },
               date: {
                 type: 'string',
@@ -161,14 +161,14 @@ export const exampleManifest = {
     author: 'clawdhub:openclaw',
     audits: [
       {
-        auditor: 'org:3shake',
+        auditor: 'org:acme-corp',
         date: '2026-01-31',
         contentHash: 'sha256:abc123...',
         scope: 'full',
         notes: 'No malicious patterns found. Permissions match actual usage.'
       }
     ],
-    chain: ['clawdhub:official', 'audited:3shake'],
+    chain: ['clawdhub:official', 'audited:acme-corp'],
     verified: true
   },
   risks: {

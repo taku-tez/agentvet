@@ -28,7 +28,7 @@ export const KNOWN_AUDITORS = {
   'clawdhub:official': { level: TRUST_LEVELS.OFFICIAL, name: 'ClawdHub Official' },
   'clawdhub:verified': { level: TRUST_LEVELS.REGISTRY, name: 'ClawdHub Verified' },
   'org:openclaw': { level: TRUST_LEVELS.ORGANIZATION, name: 'OpenClaw Team' },
-  'org:3shake': { level: TRUST_LEVELS.ORGANIZATION, name: '3shake Inc.' },
+  'org:acme-corp': { level: TRUST_LEVELS.ORGANIZATION, name: 'Acme Corp.' },
   // ユーザーは動的に追加可能
 };
 

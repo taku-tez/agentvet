@@ -346,7 +346,7 @@ agentvet manifest example
     "author": "github:username",
     "audits": [
       {
-        "auditor": "org:3shake",
+        "auditor": "org:acme-corp",
         "date": "2026-01-31",
         "contentHash": "sha256:...",
         "scope": "full"
