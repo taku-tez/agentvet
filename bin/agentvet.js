@@ -6,8 +6,15 @@
 
 const fs = require('fs');
 const path = require('path');
-const { scan } = require('../src/index.js');
-const { printReport, printJSON, printQuiet, printHTML, printMarkdown } = require('../src/reporter.js');
+// Use dist/ for TypeScript build output, fallback to src/ for development
+let scan, printReport, printJSON, printQuiet, printHTML, printMarkdown;
+try {
+  ({ scan } = require('../dist/index.js'));
+  ({ printReport, printJSON, printQuiet, printHTML, printMarkdown } = require('../dist/reporter.js'));
+} catch {
+  ({ scan } = require('../src/index.js'));
+  ({ printReport, printJSON, printQuiet, printHTML, printMarkdown } = require('../src/reporter.js'));
+}
 
 const VERSION = require('../package.json').version;
 

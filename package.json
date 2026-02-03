@@ -1,18 +1,23 @@
 {
   "name": "@agentvet/cli",
-  "version": "0.7.5",
+  "version": "0.8.0",
   "description": "Security scanner for AI agent skills, configs, and MCP tools. Vet before you trust.",
-  "main": "src/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "agentvet": "bin/agentvet.js",
     "agentvet-manifest": "bin/manifest.js"
   },
   "scripts": {
-    "test": "node --test test/*.test.js",
+    "build": "tsc",
+    "build:check": "tsc --noEmit",
+    "dev": "node bin/agentvet.js",
+    "test": "npm run build && node --test test/*.test.js",
     "lint": "eslint src bin",
     "lint:fix": "eslint src bin --fix",
     "scan": "node bin/agentvet.js scan .",
-    "scan:sarif": "node bin/agentvet.js scan . --format sarif --output results.sarif"
+    "scan:sarif": "node bin/agentvet.js scan . --format sarif --output results.sarif",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "security",
@@ -36,13 +41,17 @@
   },
   "homepage": "https://github.com/taku-tez/agentvet#readme",
   "devDependencies": {
-    "eslint": "^9.0.0"
+    "@types/node": "^25.2.0",
+    "eslint": "^9.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "files": [
     "bin",
+    "dist",
     "src",
     "yara",
     "README.md",

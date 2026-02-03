@@ -3,41 +3,36 @@
  * Core scanning logic
  */
 
-const fs = require('fs');
-const path = require('path');
+import * as fs from 'fs';
+import * as path from 'path';
+import type { Rule, Finding, ScanOptions, ScanResult, Severity } from './types.js';
 
 // Simple gitignore-style pattern matcher
-function matchesIgnorePattern(filePath, pattern) {
-  // Normalize paths
+function matchesIgnorePattern(filePath: string, pattern: string): boolean {
   const normalizedPath = filePath.replace(/\\/g, '/');
   const normalizedPattern = pattern.replace(/\\/g, '/').trim();
   
   if (!normalizedPattern || normalizedPattern.startsWith('#')) {
-    return false; // Empty or comment
+    return false;
   }
   
-  // Handle negation (!)
   if (normalizedPattern.startsWith('!')) {
-    return false; // Negation not supported yet
+    return false;
   }
   
-  // Convert gitignore pattern to regex
   let regexPattern = normalizedPattern
-    .replace(/\./g, '\\.') // Escape dots
-    .replace(/\*\*/g, '{{GLOBSTAR}}') // Temp placeholder for **
-    .replace(/\*/g, '[^/]*') // * matches anything except /
-    .replace(/{{GLOBSTAR}}/g, '.*') // ** matches everything
-    .replace(/\?/g, '[^/]'); // ? matches single char
+    .replace(/\./g, '\\.')
+    .replace(/\*\*/g, '{{GLOBSTAR}}')
+    .replace(/\*/g, '[^/]*')
+    .replace(/{{GLOBSTAR}}/g, '.*')
+    .replace(/\?/g, '[^/]');
   
-  // If pattern starts with /, anchor to root
   if (regexPattern.startsWith('/')) {
     regexPattern = '^' + regexPattern.slice(1);
   } else {
-    // Match anywhere in path
     regexPattern = '(^|/)' + regexPattern;
   }
   
-  // If pattern ends with /, match directory
   if (regexPattern.endsWith('/')) {
     regexPattern = regexPattern + '.*';
   } else {
@@ -61,62 +56,48 @@ const mcp = require('./rules/mcp.js');
 const agents = require('./rules/agents.js');
 const cicd = require('./rules/cicd.js');
 
-// YARA scanner (optional)
-let YaraScanner;
+// Optional modules
+let YaraScanner: any = null;
 try {
   ({ YaraScanner } = require('./yara/index.js'));
 } catch {
-  YaraScanner = null;
+  // YARA not available
 }
 
-// Dependency scanner (optional)
-let DependencyScanner;
+let DependencyScanner: any = null;
 try {
   ({ DependencyScanner } = require('./deps/index.js'));
 } catch {
-  DependencyScanner = null;
+  // Dependency scanner not available
 }
 
-// LLM analyzer (optional)
-let LLMAnalyzer;
+let LLMAnalyzer: any = null;
 try {
   ({ LLMAnalyzer } = require('./llm/index.js'));
 } catch {
-  LLMAnalyzer = null;
+  // LLM analyzer not available
 }
 
-// Custom rules engine
-let CustomRulesEngine;
+let CustomRulesEngine: any = null;
 try {
   ({ CustomRulesEngine } = require('./rules/custom.js'));
 } catch {
-  CustomRulesEngine = null;
+  // Custom rules not available
 }
 
-// URL/IP Reputation checker
-let ReputationChecker;
+let ReputationChecker: any = null;
 try {
   ({ ReputationChecker } = require('./reputation/index.js'));
 } catch {
-  ReputationChecker = null;
+  // Reputation checker not available
 }
 
-// Files to always scan
+// Priority files
 const _PRIORITY_FILES = [
-  'SKILL.md',
-  'skill.md',
-  'AGENTS.md',
-  'agents.md',
-  'mcp.json',
-  'mcp-config.json',
-  '.mcp-config.json',
-  '.mcp.json',
-  'claude_desktop_config.json',
-  'cline_mcp_settings.json',
-  '.cursor-mcp.json',
-  '.env',
-  'config.json',
-  'settings.json',
+  'SKILL.md', 'skill.md', 'AGENTS.md', 'agents.md',
+  'mcp.json', 'mcp-config.json', '.mcp-config.json', '.mcp.json',
+  'claude_desktop_config.json', 'cline_mcp_settings.json', '.cursor-mcp.json',
+  '.env', 'config.json', 'settings.json',
 ];
 
 // Binary extensions to skip
@@ -131,85 +112,108 @@ const BINARY_EXTENSIONS = [
 
 // Directories to exclude
 const EXCLUDE_DIRS = [
-  'node_modules',
-  '.git',
-  '.cache',
-  '.npm',
-  '__pycache__',
-  'venv',
-  '.venv',
-  'dist',
-  'build',
-  'coverage',
+  'node_modules', '.git', '.cache', '.npm', '__pycache__',
+  'venv', '.venv', 'dist', 'build', 'coverage',
 ];
 
 // Files to exclude
 const EXCLUDE_FILES = [
-  'package-lock.json',
-  'yarn.lock',
-  'pnpm-lock.yaml',
+  'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
 ];
 
-// File patterns to exclude (reduce false positives)
+// Exclude patterns (reduce false positives)
 const EXCLUDE_PATTERNS = [
-  // XML/XSD schema files (OOXML, etc.) - high false positive rate
-  /\.xsd$/i,
-  /\.xsl$/i,
-  /\.dtd$/i,
-  /schemas?\//i,
-  // Minified/bundled files
-  /\.min\.js$/i,
-  /\.bundle\.js$/i,
-  /vendor\.js$/i,
-  // Test fixtures (may contain intentional "bad" patterns)
-  /fixtures?\//i,
-  /test-data\//i,
-  // Documentation images and assets
-  /docs?\/images?\//i,
-  /assets?\/images?\//i,
-  // Third party notices (legal text, not code)
-  /THIRD_PARTY/i,
-  /NOTICES?\.md$/i,
-  /LICENSE/i,
-  // Security scan result files (contain hashes, not secrets)
-  /\.security-scan-passed$/i,
-  /\.security-scan$/i,
-  // Lock files and generated files
-  /\.lock$/i,
-  /\.sum$/i,
-  // Reference documentation (contains code examples, not actual threats)
-  /references?\//i,
-  /examples?\//i,
-  /samples?\//i,
-  /tutorials?\//i,
-  /templates?\//i,
-  // Security documentation (contains intentional examples of secrets/patterns)
-  /common_secrets/i,
-  /secret_patterns/i,
-  /credential_examples/i,
+  /\.xsd$/i, /\.xsl$/i, /\.dtd$/i, /schemas?\//i,
+  /\.min\.js$/i, /\.bundle\.js$/i, /vendor\.js$/i,
+  /fixtures?\//i, /test-data\//i,
+  /docs?\/images?\//i, /assets?\/images?\//i,
+  /THIRD_PARTY/i, /NOTICES?\.md$/i, /LICENSE/i,
+  /\.security-scan-passed$/i, /\.security-scan$/i,
+  /\.lock$/i, /\.sum$/i,
+  /references?\//i, /examples?\//i, /samples?\//i, /tutorials?\//i, /templates?\//i,
+  /common_secrets/i, /secret_patterns/i, /credential_examples/i,
 ];
 
-class Scanner {
-  constructor(options = {}) {
+interface ScannerOptions {
+  fix?: boolean;
+  severityFilter?: Severity | string;
+  maxFileSize?: number;
+  checkPermissions?: boolean;
+  yara?: boolean;
+  deps?: boolean;
+  llm?: boolean;
+  customRules?: string;
+  reputation?: boolean;
+  yaraOptions?: any;
+  depsOptions?: any;
+  llmOptions?: any;
+  reputationOptions?: any;
+  respectGitignore?: boolean;
+}
+
+interface InternalResults {
+  findings: any[];
+  summary: {
+    total: number;
+    critical: number;
+    warning: number;
+    info: number;
+    [key: string]: number;
+  };
+  scannedFiles: number;
+  fixedIssues: number;
+  yaraEnabled: boolean;
+  depsEnabled: boolean;
+  depsResults: any;
+  llmEnabled: boolean;
+  llmResults: any;
+  yaraMode?: string;
+  llmProvider?: string;
+  customRulesEnabled?: boolean;
+  customRulesCount?: number;
+  reputationEnabled?: boolean;
+  reputationServices?: string[];
+  ignoreSources?: string[];
+  ignorePatterns?: number;
+  ignoredFindings?: number;
+  reputationResults?: any;
+  reputationError?: string;
+  llmError?: string;
+}
+
+interface IgnoreMap {
+  lines: Set<number>;
+  lineRules: Map<number, Set<string>>;
+}
+
+export class Scanner {
+  private options: ScannerOptions;
+  private results: InternalResults;
+  private rules: any[];
+  private ignorePatterns: string[];
+  private rootPath: string | null;
+  private nestedGitignores?: Map<string, string[]>;
+  private yaraScanner: any;
+  private depsScanner: any;
+  private llmAnalyzer: any;
+  private customRulesEngine: any;
+  private reputationChecker: any;
+
+  constructor(options: ScannerOptions = {}) {
     this.options = {
       fix: false,
       severityFilter: 'info',
-      maxFileSize: 1024 * 1024, // 1MB
+      maxFileSize: 1024 * 1024,
       checkPermissions: true,
-      yara: true, // Enable YARA scanning by default
-      deps: true, // Enable dependency scanning by default
-      llm: false, // LLM analysis disabled by default (requires API key)
+      yara: true,
+      deps: true,
+      llm: false,
       ...options,
     };
     
     this.results = {
       findings: [],
-      summary: {
-        total: 0,
-        critical: 0,
-        warning: 0,
-        info: 0,
-      },
+      summary: { total: 0, critical: 0, warning: 0, info: 0 },
       scannedFiles: 0,
       fixedIssues: 0,
       yaraEnabled: false,
@@ -228,80 +232,75 @@ class Scanner {
       ...cicd.rules,
     ];
     
-    // Ignore patterns (loaded from .agentvetignore)
     this.ignorePatterns = [];
     this.rootPath = null;
     
-    // Initialize YARA scanner if available and enabled
+    // Initialize optional scanners
+    this.initializeOptionalScanners();
+  }
+
+  private initializeOptionalScanners(): void {
     if (this.options.yara && YaraScanner) {
       try {
-        this.yaraScanner = new YaraScanner(options.yaraOptions || {});
+        this.yaraScanner = new YaraScanner(this.options.yaraOptions || {});
         this.results.yaraEnabled = true;
         this.results.yaraMode = this.yaraScanner.getStatus().mode;
-      } catch (e) {
-        // YARA initialization failed, continue without it
+      } catch {
         this.yaraScanner = null;
       }
     }
     
-    // Initialize dependency scanner if available and enabled
     if (this.options.deps && DependencyScanner) {
       try {
-        this.depsScanner = new DependencyScanner(options.depsOptions || {});
+        this.depsScanner = new DependencyScanner(this.options.depsOptions || {});
         this.results.depsEnabled = true;
-      } catch (e) {
+      } catch {
         this.depsScanner = null;
       }
     }
     
-    // Initialize LLM analyzer if available and enabled
     if (this.options.llm && LLMAnalyzer) {
       try {
-        this.llmAnalyzer = new LLMAnalyzer(options.llmOptions || {});
+        this.llmAnalyzer = new LLMAnalyzer(this.options.llmOptions || {});
         if (this.llmAnalyzer.isAvailable()) {
           this.results.llmEnabled = true;
           this.results.llmProvider = this.llmAnalyzer.getStatus().provider;
         } else {
           this.llmAnalyzer = null;
         }
-      } catch (e) {
+      } catch {
         this.llmAnalyzer = null;
       }
     }
 
-    // Initialize custom rules engine if rules file specified
     if (this.options.customRules && CustomRulesEngine) {
       try {
         this.customRulesEngine = new CustomRulesEngine();
         const rulesLoaded = this.customRulesEngine.loadFromFile(this.options.customRules);
         this.results.customRulesEnabled = true;
         this.results.customRulesCount = rulesLoaded;
-      } catch (e) {
+      } catch (e: any) {
         console.warn(`Custom rules warning: ${e.message}`);
         this.customRulesEngine = null;
       }
     }
 
-    // Initialize reputation checker if enabled
     if (this.options.reputation && ReputationChecker) {
       try {
-        this.reputationChecker = new ReputationChecker(options.reputationOptions || {});
+        this.reputationChecker = new ReputationChecker(this.options.reputationOptions || {});
         if (this.reputationChecker.isAvailable()) {
           this.results.reputationEnabled = true;
           this.results.reputationServices = this.reputationChecker.getAvailableServices();
         } else {
           this.reputationChecker = null;
         }
-      } catch (e) {
+      } catch {
         this.reputationChecker = null;
       }
     }
   }
 
-  /**
-   * Scan a path (file or directory)
-   */
-  async scan(targetPath) {
+  async scan(targetPath: string): Promise<InternalResults> {
     const resolvedPath = path.resolve(targetPath.replace(/^~/, process.env.HOME || ''));
     
     if (!fs.existsSync(resolvedPath)) {
@@ -310,7 +309,6 @@ class Scanner {
     
     const stat = fs.statSync(resolvedPath);
     
-    // Set root path and load ignore patterns
     this.rootPath = stat.isDirectory() ? resolvedPath : path.dirname(resolvedPath);
     this.loadIgnorePatterns(this.rootPath);
     
@@ -320,32 +318,26 @@ class Scanner {
       this.walkDirectory(resolvedPath);
     }
     
-    // Check file permissions for sensitive files
     if (this.options.checkPermissions) {
       this.checkPermissions();
     }
     
-    // Run YARA scan if enabled
     if (this.yaraScanner) {
       await this.runYaraScan(resolvedPath);
     }
     
-    // Run dependency scan if enabled
     if (this.depsScanner) {
       await this.runDepsScan(resolvedPath);
     }
     
-    // Run LLM analysis if enabled
     if (this.llmAnalyzer) {
       await this.runLLMAnalysis(resolvedPath);
     }
 
-    // Run reputation check if enabled
     if (this.reputationChecker) {
       await this.runReputationCheck(resolvedPath);
     }
     
-    // Auto-fix if requested
     if (this.options.fix) {
       this.autoFix();
     }
@@ -353,14 +345,10 @@ class Scanner {
     return this.results;
   }
 
-  /**
-   * Load ignore patterns from .agentvetignore
-   */
-  loadIgnorePatterns(rootPath) {
-    const patterns = [];
-    const sources = [];
+  private loadIgnorePatterns(rootPath: string): void {
+    const patterns: string[] = [];
+    const sources: string[] = [];
 
-    // Load .agentvetignore (highest priority)
     const agentvetIgnore = path.join(rootPath, '.agentvetignore');
     if (fs.existsSync(agentvetIgnore)) {
       try {
@@ -376,7 +364,6 @@ class Scanner {
       }
     }
 
-    // Load .gitignore (if option enabled, default: true)
     if (this.options.respectGitignore !== false) {
       const gitignore = path.join(rootPath, '.gitignore');
       if (fs.existsSync(gitignore)) {
@@ -392,12 +379,10 @@ class Scanner {
           // Ignore read errors
         }
       }
-
-      // Also check for nested .gitignore files in subdirectories
       this.nestedGitignores = new Map();
     }
 
-    this.ignorePatterns = [...new Set(patterns)]; // Deduplicate
+    this.ignorePatterns = [...new Set(patterns)];
     
     if (sources.length > 0) {
       this.results.ignoreSources = sources;
@@ -405,17 +390,14 @@ class Scanner {
     }
   }
 
-  /**
-   * Load nested .gitignore for a directory
-   */
-  loadNestedGitignore(dirPath) {
-    if (!this.options.respectGitignore !== false) return [];
+  private loadNestedGitignore(dirPath: string): string[] {
+    if (this.options.respectGitignore === false) return [];
     
     const gitignore = path.join(dirPath, '.gitignore');
     if (!fs.existsSync(gitignore)) return [];
     
     if (this.nestedGitignores?.has(dirPath)) {
-      return this.nestedGitignores.get(dirPath);
+      return this.nestedGitignores.get(dirPath)!;
     }
 
     try {
@@ -432,14 +414,9 @@ class Scanner {
     }
   }
 
-  /**
-   * Check if a file should be ignored
-   */
-  isIgnored(filePath) {
-    // Get relative path from root
-    const relativePath = path.relative(this.rootPath, filePath);
+  private isIgnored(filePath: string): boolean {
+    const relativePath = path.relative(this.rootPath!, filePath);
     
-    // Check root-level ignore patterns
     if (this.ignorePatterns.length > 0) {
       for (const pattern of this.ignorePatterns) {
         if (matchesIgnorePattern(relativePath, pattern)) {
@@ -448,13 +425,11 @@ class Scanner {
       }
     }
 
-    // Check nested .gitignore patterns
     if (this.options.respectGitignore !== false && this.nestedGitignores) {
       const dirPath = path.dirname(filePath);
       let currentDir = dirPath;
       
-      // Walk up the directory tree checking for nested .gitignore
-      while (currentDir.startsWith(this.rootPath) && currentDir !== this.rootPath) {
+      while (currentDir.startsWith(this.rootPath!) && currentDir !== this.rootPath) {
         const nestedPatterns = this.loadNestedGitignore(currentDir);
         const relativeToNested = path.relative(currentDir, filePath);
         
@@ -471,27 +446,19 @@ class Scanner {
     return false;
   }
 
-  /**
-   * Walk directory recursively
-   */
-  walkDirectory(dirPath) {
-    let entries;
+  private walkDirectory(dirPath: string): void {
+    let entries: string[];
     try {
       entries = fs.readdirSync(dirPath);
-    } catch (e) {
-      return; // Skip inaccessible directories
+    } catch {
+      return;
     }
     
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry);
       
-      // Skip excluded directories
       if (EXCLUDE_DIRS.includes(entry)) continue;
-      
-      // Skip excluded files
       if (EXCLUDE_FILES.includes(entry)) continue;
-      
-      // Skip ignored paths
       if (this.isIgnored(fullPath)) continue;
       
       try {
@@ -502,68 +469,53 @@ class Scanner {
         } else if (stat.isFile()) {
           this.scanFile(fullPath);
         }
-      } catch (e) {
-        // Skip files we can't access
+      } catch {
+        // Skip inaccessible files
       }
     }
   }
 
-  /**
-   * Scan a single file
-   */
-  scanFile(filePath) {
+  private scanFile(filePath: string): void {
     const ext = path.extname(filePath).toLowerCase();
     const basename = path.basename(filePath);
     
-    // Skip binary files
     if (BINARY_EXTENSIONS.includes(ext)) return;
     
-    // Skip files matching exclude patterns (reduce false positives)
     for (const pattern of EXCLUDE_PATTERNS) {
       if (pattern.test(filePath)) return;
     }
     
-    // Skip self
     if (basename === 'agentvet.js') return;
     
-    // Check file size
     try {
       const stat = fs.statSync(filePath);
-      if (stat.size > this.options.maxFileSize) return;
-    } catch (e) {
+      if (stat.size > this.options.maxFileSize!) return;
+    } catch {
       return;
     }
     
-    // Read file content
-    let content;
+    let content: string;
     try {
       content = fs.readFileSync(filePath, 'utf8');
-    } catch (e) {
-      return; // Skip unreadable files
+    } catch {
+      return;
     }
     
     this.results.scannedFiles++;
     
-    // Parse ignore comments
     const ignoreMap = this.parseIgnoreComments(content);
-    
-    // Determine file type for rule filtering
     const isDocFile = ['.md', '.mdx', '.txt', '.rst'].includes(ext);
     
-    // Apply each rule
     for (const rule of this.rules) {
-      // Skip code-focused rules for documentation files
       if (isDocFile && this.isCodeOnlyRule(rule)) {
         continue;
       }
       this.applyRule(rule, filePath, content, ignoreMap);
     }
 
-    // Apply custom rules if enabled
     if (this.customRulesEngine) {
       const customFindings = this.customRulesEngine.scan(filePath, content);
       for (const finding of customFindings) {
-        // Check if this finding should be ignored
         if (this.shouldIgnore(ignoreMap, finding.line, finding.rule)) {
           this.results.ignoredFindings = (this.results.ignoredFindings || 0) + 1;
           continue;
@@ -586,34 +538,19 @@ class Scanner {
     }
   }
 
-  /**
-   * Check if rule should only apply to code files (not docs)
-   */
-  isCodeOnlyRule(rule) {
-    // MCP rules and command execution rules are code-focused
+  private isCodeOnlyRule(rule: any): boolean {
     const codeOnlyPrefixes = ['mcp-', 'command-'];
     return codeOnlyPrefixes.some(prefix => rule.id.startsWith(prefix));
   }
 
-  /**
-   * Parse ignore comments from file content
-   * Supports:
-   *   // agentvet-ignore - ignore this line
-   *   // agentvet-ignore-next-line - ignore next line
-   *   // agentvet-ignore rule-id - ignore specific rule
-   *   block comment style with agentvet-ignore
-   *   # agentvet-ignore - for shell/python/yaml
-   *   HTML comment with agentvet-ignore - for HTML/markdown
-   */
-  parseIgnoreComments(content) {
-    const ignoreMap = {
-      lines: new Set(),      // Lines to completely ignore
-      lineRules: new Map(),  // Line -> Set of rule IDs to ignore
+  private parseIgnoreComments(content: string): IgnoreMap {
+    const ignoreMap: IgnoreMap = {
+      lines: new Set(),
+      lineRules: new Map(),
     };
 
     const lines = content.split('\n');
     
-    // Patterns for ignore comments
     const ignorePatterns = [
       /(?:\/\/|#|\/\*)\s*agentvet-ignore(?:-next-line)?(?:\s+([\w-]+(?:\s*,\s*[\w-]+)*))?/gi,
       /<!--\s*agentvet-ignore(?:-next-line)?(?:\s+([\w-]+(?:\s*,\s*[\w-]+)*))?\s*-->/gi,
@@ -633,13 +570,11 @@ class Scanner {
           const ruleIds = match[1] ? match[1].split(/\s*,\s*/).map(r => r.trim()) : null;
 
           if (ruleIds && ruleIds.length > 0) {
-            // Ignore specific rules
             if (!ignoreMap.lineRules.has(targetLine)) {
               ignoreMap.lineRules.set(targetLine, new Set());
             }
-            ruleIds.forEach(id => ignoreMap.lineRules.get(targetLine).add(id));
+            ruleIds.forEach(id => ignoreMap.lineRules.get(targetLine)!.add(id));
           } else {
-            // Ignore all rules on this line
             ignoreMap.lines.add(targetLine);
           }
         }
@@ -649,18 +584,13 @@ class Scanner {
     return ignoreMap;
   }
 
-  /**
-   * Check if a finding should be ignored
-   */
-  shouldIgnore(ignoreMap, lineNum, ruleId) {
-    // Check if entire line is ignored
+  private shouldIgnore(ignoreMap: IgnoreMap, lineNum: number, ruleId: string): boolean {
     if (ignoreMap.lines.has(lineNum)) {
       return true;
     }
 
-    // Check if specific rule is ignored for this line
     if (ignoreMap.lineRules.has(lineNum)) {
-      const ignoredRules = ignoreMap.lineRules.get(lineNum);
+      const ignoredRules = ignoreMap.lineRules.get(lineNum)!;
       if (ignoredRules.has(ruleId) || ignoredRules.has('*')) {
         return true;
       }
@@ -669,17 +599,12 @@ class Scanner {
     return false;
   }
 
-  /**
-   * Apply a single rule to file content
-   */
-  applyRule(rule, filePath, content, ignoreMap = null) {
-    // Skip if severity doesn't match filter
-    const severityOrder = { critical: 0, warning: 1, info: 2 };
-    const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+  private applyRule(rule: any, filePath: string, content: string, ignoreMap: IgnoreMap | null = null): void {
+    const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+    const filterLevel = severityOrder[this.options.severityFilter as string] ?? 2;
     const ruleLevel = severityOrder[rule.severity] ?? 2;
     if (ruleLevel > filterLevel) return;
     
-    // Reset regex lastIndex
     rule.pattern.lastIndex = 0;
     
     const lines = content.split('\n');
@@ -688,10 +613,8 @@ class Scanner {
     while ((match = rule.pattern.exec(content)) !== null) {
       const lineNum = content.substring(0, match.index).split('\n').length;
       
-      // Check if this finding should be ignored
       if (ignoreMap && this.shouldIgnore(ignoreMap, lineNum, rule.id)) {
         this.results.ignoredFindings = (this.results.ignoredFindings || 0) + 1;
-        // Prevent infinite loop for zero-width matches
         if (match.index === rule.pattern.lastIndex) {
           rule.pattern.lastIndex++;
         }
@@ -700,7 +623,6 @@ class Scanner {
 
       const lineContent = lines[lineNum - 1] || '';
       
-      // Create finding
       const finding = {
         ruleId: rule.id,
         severity: rule.severity,
@@ -717,25 +639,19 @@ class Scanner {
       this.results.summary[rule.severity]++;
       this.results.summary.total++;
       
-      // Prevent infinite loop for zero-width matches
       if (match.index === rule.pattern.lastIndex) {
         rule.pattern.lastIndex++;
       }
     }
   }
 
-  /**
-   * Sanitize snippet (mask sensitive data)
-   */
-  sanitizeSnippet(snippet, rule) {
-    // For credential rules, mask the actual value
+  private sanitizeSnippet(snippet: string, rule: any): string {
     if (rule.id.startsWith('credential-')) {
       if (snippet.length > 20) {
         return snippet.substring(0, 10) + '***' + snippet.substring(snippet.length - 4);
       }
     }
     
-    // Truncate long snippets
     if (snippet.length > 60) {
       return snippet.substring(0, 57) + '...';
     }
@@ -743,13 +659,7 @@ class Scanner {
     return snippet;
   }
 
-  /**
-   * Check file permissions for sensitive files
-   * Only checks files within the scan target directory (not system-wide)
-   */
-  checkPermissions() {
-    // Only check permissions within the scanned directory
-    // Do NOT check ~/.config or other system directories - those are out of scope
+  private checkPermissions(): void {
     if (!this.rootPath) return;
     
     for (const rule of permissions.rules) {
@@ -757,14 +667,11 @@ class Scanner {
     }
   }
 
-  /**
-   * Walk directory checking permissions
-   */
-  walkForPermissions(dirPath, rule) {
-    let entries;
+  private walkForPermissions(dirPath: string, rule: any): void {
+    let entries: string[];
     try {
       entries = fs.readdirSync(dirPath);
-    } catch (e) {
+    } catch {
       return;
     }
     
@@ -777,15 +684,13 @@ class Scanner {
         if (stat.isDirectory()) {
           this.walkForPermissions(fullPath, rule);
         } else if (stat.isFile()) {
-          // Check if file matches sensitive patterns
-          const isSensitive = rule.patterns.some(p => 
+          const isSensitive = rule.patterns.some((p: string) => 
             entry.includes(p) || entry.endsWith(p)
           );
           
           if (isSensitive) {
             const mode = (stat.mode & 0o777).toString(8);
             
-            // Check if permissions are too open
             if (mode !== '600' && mode !== '400') {
               const finding = {
                 ruleId: rule.id,
@@ -805,33 +710,27 @@ class Scanner {
             }
           }
         }
-      } catch (e) {
-        // Skip inaccessible files
+      } catch {
+        // Skip inaccessible
       }
     }
   }
 
-  /**
-   * Auto-fix permission issues
-   */
-  autoFix() {
+  private autoFix(): void {
     for (const finding of this.results.findings) {
-      if (finding.fixable && finding.ruleId === 'permission-sensitive-files') {
+      if ((finding as any).fixable && finding.ruleId === 'permission-sensitive-files') {
         try {
           fs.chmodSync(finding.file, 0o600);
           this.results.fixedIssues++;
-          finding.fixed = true;
-        } catch (e) {
-          finding.fixError = e.message;
+          (finding as any).fixed = true;
+        } catch (e: any) {
+          (finding as any).fixError = e.message;
         }
       }
     }
   }
 
-  /**
-   * Run YARA scan on target path
-   */
-  async runYaraScan(targetPath) {
+  private async runYaraScan(targetPath: string): Promise<void> {
     if (!this.yaraScanner) return;
     
     try {
@@ -844,12 +743,9 @@ class Scanner {
         yaraFindings = await this.yaraScanner.scanDirectory(targetPath);
       }
       
-      // Add YARA findings to results
       for (const finding of yaraFindings) {
-        // Skip ignored files
         if (this.isIgnored(finding.file)) continue;
         
-        // Skip files matching exclude patterns
         let excluded = false;
         for (const pattern of EXCLUDE_PATTERNS) {
           if (pattern.test(finding.file)) {
@@ -859,9 +755,8 @@ class Scanner {
         }
         if (excluded) continue;
         
-        // Apply severity filter
-        const severityOrder = { critical: 0, warning: 1, info: 2 };
-        const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+        const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+        const filterLevel = severityOrder[this.options.severityFilter as string] ?? 2;
         const findingLevel = severityOrder[finding.severity] ?? 2;
         
         if (findingLevel > filterLevel) continue;
@@ -881,25 +776,20 @@ class Scanner {
         this.results.summary[finding.severity]++;
         this.results.summary.total++;
       }
-    } catch (e) {
-      // YARA scan failed, continue without it
+    } catch {
+      // YARA scan failed
     }
   }
 
-  /**
-   * Run dependency vulnerability scan
-   */
-  async runDepsScan(targetPath) {
+  private async runDepsScan(targetPath: string): Promise<void> {
     if (!this.depsScanner) return;
     
     try {
       const depsResults = await this.depsScanner.scan(targetPath);
       this.results.depsResults = depsResults;
       
-      // Add dependency findings to main findings
       for (const finding of depsResults.findings) {
-        // Map severity to our severity levels
-        let severity;
+        let severity: string;
         if (finding.severity === 'critical' || finding.severity === 'high') {
           severity = 'critical';
         } else if (finding.severity === 'moderate') {
@@ -908,9 +798,8 @@ class Scanner {
           severity = 'info';
         }
         
-        // Apply severity filter
-        const severityOrder = { critical: 0, warning: 1, info: 2 };
-        const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+        const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+        const filterLevel = severityOrder[this.options.severityFilter as string] ?? 2;
         const findingLevel = severityOrder[severity] ?? 2;
         
         if (findingLevel > filterLevel) continue;
@@ -932,25 +821,20 @@ class Scanner {
         this.results.summary[severity]++;
         this.results.summary.total++;
       }
-    } catch (e) {
-      // Dependency scan failed, continue without it
+    } catch {
+      // Dependency scan failed
     }
   }
 
-  /**
-   * Run LLM-based intent analysis
-   */
-  async runLLMAnalysis(targetPath) {
+  private async runLLMAnalysis(targetPath: string): Promise<void> {
     if (!this.llmAnalyzer) return;
     
     try {
       const llmResults = await this.llmAnalyzer.analyze(targetPath);
       this.results.llmResults = llmResults;
       
-      // Add LLM findings to main findings
       for (const finding of llmResults.findings || []) {
-        // Map severity
-        let severity;
+        let severity: string;
         if (finding.severity === 'critical' || finding.severity === 'high') {
           severity = 'critical';
         } else if (finding.severity === 'medium') {
@@ -959,14 +843,12 @@ class Scanner {
           severity = 'info';
         }
         
-        // Apply severity filter
-        const severityOrder = { critical: 0, warning: 1, info: 2 };
-        const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+        const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+        const filterLevel = severityOrder[this.options.severityFilter as string] ?? 2;
         const findingLevel = severityOrder[severity] ?? 2;
         
         if (findingLevel > filterLevel) continue;
         
-        // Skip ignored files
         if (finding.file && this.isIgnored(finding.file)) continue;
         
         this.results.findings.push({
@@ -984,47 +866,38 @@ class Scanner {
         this.results.summary[severity]++;
         this.results.summary.total++;
       }
-    } catch (e) {
-      // LLM analysis failed, continue without it
+    } catch (e: any) {
       this.results.llmError = e.message;
     }
   }
 
-  /**
-   * Run URL/IP reputation check
-   */
-  async runReputationCheck(targetPath) {
+  private async runReputationCheck(targetPath: string): Promise<void> {
     try {
-      // Collect all file contents for URL/IP extraction
       const files = this.collectFiles(targetPath);
       let allContent = '';
       
-      for (const file of files.slice(0, 50)) { // Limit to 50 files
+      for (const file of files.slice(0, 50)) {
         try {
           const content = fs.readFileSync(file, 'utf8');
           allContent += content + '\n';
         } catch {
-          // Skip unreadable files
+          // Skip unreadable
         }
       }
 
-      // Run reputation check
       const repResults = await this.reputationChecker.scanContent(allContent, {
         maxChecks: this.options.reputationOptions?.maxChecks || 10,
       });
 
-      // Store results
       this.results.reputationResults = {
         checked: repResults.checked,
         skipped: repResults.skipped,
         findingsCount: repResults.findings.length,
       };
 
-      // Add findings
       for (const finding of repResults.findings) {
-        // Apply severity filter
-        const severityOrder = { critical: 0, warning: 1, info: 2 };
-        const filterLevel = severityOrder[this.options.severityFilter] ?? 2;
+        const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+        const filterLevel = severityOrder[this.options.severityFilter as string] ?? 2;
         const findingLevel = severityOrder[finding.severity] ?? 2;
         
         if (findingLevel > filterLevel) continue;
@@ -1045,23 +918,20 @@ class Scanner {
         this.results.summary[finding.severity]++;
         this.results.summary.total++;
       }
-    } catch (e) {
+    } catch (e: any) {
       this.results.reputationError = e.message;
     }
   }
 
-  /**
-   * Collect files from a path
-   */
-  collectFiles(targetPath) {
-    const files = [];
+  private collectFiles(targetPath: string): string[] {
+    const files: string[] = [];
     const stat = fs.statSync(targetPath);
     
     if (stat.isFile()) {
       return [targetPath];
     }
 
-    const walk = (dir) => {
+    const walk = (dir: string) => {
       try {
         const entries = fs.readdirSync(dir);
         for (const entry of entries) {
@@ -1095,4 +965,5 @@ class Scanner {
   }
 }
 
+// CommonJS export
 module.exports = { Scanner };

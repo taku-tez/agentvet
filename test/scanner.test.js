@@ -8,7 +8,13 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const { scan } = require('../src/index.js');
+// Use dist/ for TypeScript build output, fallback to src/ for development
+let scan;
+try {
+  ({ scan } = require('../dist/index.js'));
+} catch {
+  ({ scan } = require('../src/index.js'));
+}
 
 // Create temp directory for test files
 const tmpDir = path.join(os.tmpdir(), 'agentvet-test-' + Date.now());

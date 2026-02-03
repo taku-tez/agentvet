@@ -3,24 +3,28 @@
  * Security scanner for AI agent skills, configs, and MCP tools
  */
 
-const { Scanner } = require('./scanner.js');
+import { Scanner } from './scanner.js';
+import type { Rule, Finding, Severity } from './types.js';
+
+// Re-export types
+export type { Rule, Finding, Severity };
 
 /**
  * Scan a directory or file for security issues
- * @param {string} targetPath - Path to scan
- * @param {Object} options - Scan options
- * @returns {Object} Scan results
+ * @param targetPath - Path to scan
+ * @param options - Scan options
+ * @returns Scan results
  */
-async function scan(targetPath, options = {}) {
+export async function scan(targetPath: string, options: Record<string, any> = {}): Promise<any> {
   const scanner = new Scanner(options);
   return scanner.scan(targetPath);
 }
 
 /**
  * Get the default rules
- * @returns {Array} Array of rule definitions
+ * @returns Array of rule definitions
  */
-function getRules() {
+export function getRules(): Rule[] {
   const credentials = require('./rules/credentials.js');
   const commands = require('./rules/commands.js');
   const urls = require('./rules/urls.js');
@@ -34,6 +38,10 @@ function getRules() {
   ];
 }
 
+// Export Scanner class
+export { Scanner };
+
+// Default export for CommonJS compatibility
 module.exports = {
   scan,
   getRules,
