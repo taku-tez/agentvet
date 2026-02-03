@@ -1,10 +1,14 @@
+// @ts-nocheck
+/**
+ * LLM Intent Analysis (TypeScript)
+ */
 /**
  * LLM-based Intent Analysis
  * Analyzes natural language instructions for malicious intent
  */
 
-const fs = require('fs');
-const path = require('path');
+import * as fs from "fs";
+import * as path from "path";
 
 // Files to analyze for intent
 const INSTRUCTION_FILES = [
@@ -568,4 +572,5 @@ class LLMAnalyzer {
   }
 }
 
-module.exports = { LLMAnalyzer, INSTRUCTION_FILES };
+export { LLMAnalyzer };
+module.exports = { LLMAnalyzer };

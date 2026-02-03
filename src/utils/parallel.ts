@@ -3,33 +3,66 @@
  * Optimized for large repository scanning
  */
 
+import * as os from 'os';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface CollectFilesOptions {
+  excludeDirs?: string[];
+  excludeFiles?: string[];
+  binaryExtensions?: string[];
+  maxDepth?: number;
+  maxFiles?: number;
+}
+
+interface ProgressReport {
+  processed: number;
+  total: number;
+  percent: number;
+  elapsed: string;
+  rate: string;
+  remaining: string;
+}
+
+interface ProgressTracker {
+  tick(count?: number): number;
+  report(): ProgressReport;
+  shouldReport(): boolean;
+}
+
+interface ReadResult {
+  content?: string;
+  size?: number;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+}
+
 /**
  * Process items in parallel with concurrency limit
- * @param {Array} items - Items to process
- * @param {Function} processor - Async function to process each item
- * @param {number} concurrency - Max concurrent operations (default: CPU cores)
- * @returns {Promise<Array>} Results array
  */
-async function parallelMap(items, processor, concurrency = null) {
-  const os = require('os');
+export async function parallelMap<T, R>(
+  items: T[],
+  processor: (item: T, index: number) => Promise<R>,
+  concurrency: number | null = null
+): Promise<(R | { error: string })[]> {
   const maxConcurrency = concurrency || Math.max(1, os.cpus().length);
   
-  const results = new Array(items.length);
+  const results: (R | { error: string })[] = new Array(items.length);
   let index = 0;
   
-  async function worker() {
+  async function worker(): Promise<void> {
     while (index < items.length) {
       const currentIndex = index++;
       try {
         results[currentIndex] = await processor(items[currentIndex], currentIndex);
-      } catch (error) {
+      } catch (error: any) {
         results[currentIndex] = { error: error.message };
       }
     }
   }
   
-  // Start workers
-  const workers = [];
+  const workers: Promise<void>[] = [];
   for (let i = 0; i < Math.min(maxConcurrency, items.length); i++) {
     workers.push(worker());
   }
@@ -40,12 +73,9 @@ async function parallelMap(items, processor, concurrency = null) {
 
 /**
  * Batch items into chunks for processing
- * @param {Array} items - Items to batch
- * @param {number} batchSize - Items per batch
- * @returns {Array<Array>} Batched arrays
  */
-function batch(items, batchSize) {
-  const batches = [];
+export function batch<T>(items: T[], batchSize: number): T[][] {
+  const batches: T[][] = [];
   for (let i = 0; i < items.length; i += batchSize) {
     batches.push(items.slice(i, i + batchSize));
   }
@@ -54,12 +84,8 @@ function batch(items, batchSize) {
 
 /**
  * Collect files from directory tree (non-recursive for performance)
- * Returns file paths without reading content
  */
-function collectFiles(dirPath, options = {}) {
-  const fs = require('fs');
-  const path = require('path');
-  
+export function collectFiles(dirPath: string, options: CollectFilesOptions = {}): string[] {
   const {
     excludeDirs = ['node_modules', '.git', '__pycache__', 'dist', 'build', '.cache', 'vendor', 'coverage'],
     excludeFiles = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'],
@@ -68,15 +94,16 @@ function collectFiles(dirPath, options = {}) {
     maxFiles = 10000,
   } = options;
   
-  const files = [];
-  const stack = [{ path: dirPath, depth: 0 }];
+  const files: string[] = [];
+  const stack: { path: string; depth: number }[] = [{ path: dirPath, depth: 0 }];
   
   while (stack.length > 0 && files.length < maxFiles) {
-    const { path: currentPath, depth } = stack.pop();
+    const item = stack.pop()!;
+    const { path: currentPath, depth } = item;
     
     if (depth > maxDepth) continue;
     
-    let entries;
+    let entries: fs.Dirent[];
     try {
       entries = fs.readdirSync(currentPath, { withFileTypes: true });
     } catch {
@@ -107,17 +134,17 @@ function collectFiles(dirPath, options = {}) {
 /**
  * Create a progress tracker
  */
-function createProgressTracker(total, reportEvery = 100) {
+export function createProgressTracker(total: number, reportEvery: number = 100): ProgressTracker {
   let processed = 0;
   const startTime = Date.now();
   
   return {
-    tick(count = 1) {
+    tick(count: number = 1): number {
       processed += count;
       return processed;
     },
     
-    report() {
+    report(): ProgressReport {
       const elapsed = (Date.now() - startTime) / 1000;
       const rate = processed / elapsed;
       const remaining = (total - processed) / rate;
@@ -132,7 +159,7 @@ function createProgressTracker(total, reportEvery = 100) {
       };
     },
     
-    shouldReport() {
+    shouldReport(): boolean {
       return processed % reportEvery === 0;
     },
   };
@@ -141,9 +168,7 @@ function createProgressTracker(total, reportEvery = 100) {
 /**
  * Memory-efficient file reader with size check
  */
-function readFileSafe(filePath, maxSize = 1024 * 1024) {
-  const fs = require('fs');
-  
+export function readFileSafe(filePath: string, maxSize: number = 1024 * 1024): ReadResult {
   try {
     const stat = fs.statSync(filePath);
     if (stat.size > maxSize) {
@@ -152,11 +177,12 @@ function readFileSafe(filePath, maxSize = 1024 * 1024) {
     
     const content = fs.readFileSync(filePath, 'utf8');
     return { content, size: stat.size };
-  } catch (error) {
+  } catch (error: any) {
     return { error: error.message };
   }
 }
 
+// CommonJS compatibility
 module.exports = {
   parallelMap,
   batch,

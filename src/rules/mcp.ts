@@ -1,3 +1,5 @@
+import type { Rule } from "../types.js";
+
 /**
  * MCP Configuration Rules
  * Detects security issues in MCP tool configurations
@@ -186,7 +188,7 @@ const mcpPromptInjectionPatterns = [
 ];
 
 // Combine all MCP rules
-const rules = [
+export const rules: Rule[] = [
   ...mcpCredentialPatterns,
   ...mcpCommandPatterns,
   ...mcpUrlPatterns,
@@ -194,4 +196,6 @@ const rules = [
   ...mcpPromptInjectionPatterns,
 ];
 
+
+// CommonJS compatibility
 module.exports = { rules };

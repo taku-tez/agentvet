@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Dependency Vulnerability Scanner
  * Integrates npm audit, pip-audit, and additional security checks
@@ -533,4 +534,5 @@ class DependencyScanner {
   }
 }
 
+export { DependencyScanner };
 module.exports = { DependencyScanner };

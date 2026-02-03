@@ -1,9 +1,11 @@
+import type { Rule } from "../types.js";
+
 /**
  * AI Agent Security Rules
  * Detects security issues in agent configs, skills, and instructions
  */
 
-const rules = [
+export const rules: Rule[] = [
   // ============================================
   // Prompt Injection Patterns
   // ============================================
@@ -518,4 +520,6 @@ const rules = [
   },
 ];
 
+
+// CommonJS compatibility
 module.exports = { rules };

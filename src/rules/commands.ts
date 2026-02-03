@@ -1,9 +1,11 @@
+import type { Rule } from "../types.js";
+
 /**
  * Dangerous Command and Code Pattern Detection Rules
  * Detects potentially dangerous shell commands, code patterns, and security issues
  */
 
-const rules = [
+export const rules: Rule[] = [
   // ============================================
   // Dangerous Shell Commands
   // ============================================
@@ -436,4 +438,6 @@ const rules = [
   },
 ];
 
+
+// CommonJS compatibility
 module.exports = { rules };

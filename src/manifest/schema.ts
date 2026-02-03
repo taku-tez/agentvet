@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Permission Manifest Schema
  * 

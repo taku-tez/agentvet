@@ -3,7 +3,15 @@
  * Checks for insecure file permissions on sensitive files
  */
 
-const rules = [
+export interface PermissionRule {
+  id: string;
+  severity: string;
+  description: string;
+  patterns: string[];
+  recommendation: string;
+}
+
+export const rules: PermissionRule[] = [
   {
     id: 'permission-sensitive-files',
     severity: 'warning',
@@ -26,4 +34,5 @@ const rules = [
   },
 ];
 
+// CommonJS compatibility
 module.exports = { rules };

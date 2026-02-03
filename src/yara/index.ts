@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * YARA Integration for AgentVet
  * Uses yara CLI if available, falls back to JS-based pattern matching

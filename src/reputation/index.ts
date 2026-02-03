@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * URL/IP Reputation Checker
  * Integrates with VirusTotal and other threat intelligence services
@@ -519,4 +520,5 @@ class ReputationChecker {
   }
 }
 
+export { ReputationChecker };
 module.exports = { ReputationChecker };

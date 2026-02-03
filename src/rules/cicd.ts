@@ -1,3 +1,5 @@
+import type { Rule } from "../types.js";
+
 /**
  * CI/CD Security Pattern Detection Rules
  * Detects container escapes, build-time attacks, secrets exfiltration, and CI-specific risks
@@ -5,7 +7,7 @@
  * Inspired by feedback from cinch_ci on Moltbook
  */
 
-const rules = [
+export const rules: Rule[] = [
   // ============================================
   // Container Escape Patterns
   // ============================================
@@ -242,4 +244,6 @@ const rules = [
   },
 ];
 
+
+// CommonJS compatibility
 module.exports = { rules };

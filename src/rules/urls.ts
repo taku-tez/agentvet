@@ -1,9 +1,11 @@
+import type { Rule } from "../types.js";
+
 /**
  * Suspicious URL and Network Detection Rules
  * Detects URLs, IPs, and patterns commonly used for data exfiltration and C2
  */
 
-const rules = [
+export const rules: Rule[] = [
   // ============================================
   // Data Exfiltration Services
   // ============================================
@@ -461,4 +463,6 @@ const rules = [
   },
 ];
 
+
+// CommonJS compatibility
 module.exports = { rules };

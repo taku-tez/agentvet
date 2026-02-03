@@ -1,10 +1,14 @@
 /**
+ * AgentVet Reporter (TypeScript)
+ */
+
+/**
  * AgentVet Reporter
  * Output formatting for scan results
  */
 
 // ANSI color codes
-const colors = {
+const colors: Record<string, (s: string) => string> = {
   red: (s) => `\x1b[31m${s}\x1b[0m`,
   green: (s) => `\x1b[32m${s}\x1b[0m`,
   yellow: (s) => `\x1b[33m${s}\x1b[0m`,
@@ -15,7 +19,7 @@ const colors = {
 };
 
 // Severity icons
-const icons = {
+const icons: Record<string, string> = {
   critical: '🔴',
   high: '🟠',
   warning: '🟡',
@@ -27,7 +31,7 @@ const icons = {
 /**
  * Print human-readable report
  */
-function printReport(results, targetPath) {
+export function printReport(results: any, targetPath: string): string {
   const lines = [];
   
   lines.push('');
@@ -149,7 +153,7 @@ function printReport(results, targetPath) {
 /**
  * Format a single finding
  */
-function formatFinding(finding, colorFn) {
+function formatFinding(finding: any, colorFn: (s: string) => string): string {
   const lines = [];
   const location = finding.line > 0 
     ? `${finding.file}:${finding.line}` 
@@ -178,14 +182,14 @@ function formatFinding(finding, colorFn) {
 /**
  * Print JSON output
  */
-function printJSON(results) {
+export function printJSON(results: any): string {
   return JSON.stringify(results, null, 2);
 }
 
 /**
  * Print quiet summary
  */
-function printQuiet(results) {
+export function printQuiet(results: any): string {
   const { summary } = results;
   
   if (summary.total === 0) {
@@ -205,7 +209,7 @@ function printQuiet(results) {
 /**
  * Generate HTML report
  */
-function printHTML(results, targetPath) {
+export function printHTML(results: any, targetPath: string): string {
   const severityColors = {
     critical: '#dc3545',
     high: '#fd7e14',
@@ -458,7 +462,7 @@ function printHTML(results, targetPath) {
 /**
  * Generate Markdown report
  */
-function printMarkdown(results, targetPath) {
+export function printMarkdown(results: any, targetPath: string): string {
   const lines = [];
   
   lines.push('# 🛡️ AgentVet Security Report\n');
@@ -531,11 +535,5 @@ function printMarkdown(results, targetPath) {
   return lines.join('\n');
 }
 
-module.exports = {
-  printReport,
-  printJSON,
-  printQuiet,
-  printHTML,
-  printMarkdown,
-  colors,
-};
+// CommonJS compatibility
+module.exports = { printReport, printJSON, printQuiet, printHTML, printMarkdown };

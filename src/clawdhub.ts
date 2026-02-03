@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ClawdHub Integration for AgentVet
  * Safe skill installation with pre-vet security scanning
@@ -297,11 +298,13 @@ async function checkSkill(skillPath, options = {}) {
   }
   
   return results;
+  // Exit code based on severity
+  if (criticalCount > 0) {
+    process.exit(1);
+  }
+  
+  return results;
 }
 
-module.exports = {
-  installSkill,
-  checkSkill,
-  checkClawdhubInstalled,
-  getWorkspace,
-};
+export { installSkill, checkSkill, checkClawdhubInstalled, getWorkspace };
+module.exports = { installSkill, checkSkill, checkClawdhubInstalled, getWorkspace };

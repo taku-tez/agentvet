@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Permission Manifest System
  * Declares and verifies skill permissions

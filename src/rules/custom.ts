@@ -3,54 +3,52 @@
  * Load user-defined rules from YAML files
  */
 
-const fs = require('fs');
-const path = require('path');
+import * as fs from 'fs';
+import * as path from 'path';
 const yaml = require('../utils/yaml.js');
 
-/**
- * Custom rule format:
- * 
- * rules:
- *   - id: custom-api-key
- *     name: Custom API Key Pattern
- *     description: Detects custom API key patterns
- *     severity: critical
- *     pattern: "MY_SECRET_KEY_[A-Za-z0-9]{32}"
- *     type: regex
- *     filePatterns: ["*.js", "*.json", "*.env"]
- *     message: "Found exposed custom API key"
- *     recommendation: "Store in environment variable"
- *     tags: [credentials, secrets]
- * 
- *   - id: forbidden-domain
- *     name: Forbidden Domain
- *     description: Detects connections to forbidden domains
- *     severity: warning
- *     type: string
- *     patterns:
- *       - "evil.com"
- *       - "malware.net"
- *     message: "Connection to forbidden domain detected"
- * 
- *   - id: dangerous-function
- *     name: Dangerous Function Call
- *     description: Detects dangerous function usage
- *     severity: warning
- *     type: ast
- *     language: javascript
- *     selector: "CallExpression[callee.name='eval']"
- *     message: "Dangerous eval() usage"
- */
+interface CustomRule {
+  id: string;
+  name: string;
+  description: string;
+  severity: string;
+  type: string;
+  patterns: string[];
+  compiledPatterns?: RegExp[];
+  filePatterns: string[];
+  message: string;
+  recommendation: string;
+  tags: string[];
+  enabled: boolean;
+}
 
-class CustomRulesEngine {
+interface CustomFinding {
+  rule: string;
+  severity: string;
+  file: string;
+  line: number;
+  message: string;
+  evidence: string;
+  recommendation: string;
+  tags: string[];
+  source: string;
+}
+
+interface RuleSummary {
+  id: string;
+  name: string;
+  severity: string;
+  enabled: boolean;
+}
+
+export class CustomRulesEngine {
+  private rules: CustomRule[] = [];
+
   constructor() {
     this.rules = [];
   }
 
-  /**
-   * Load rules from YAML file
-   */
-  loadFromFile(filePath) {
+  loadFromFile(filePath: string): number {
     try {
       const content = fs.readFileSync(filePath, 'utf-8');
       const parsed = yaml.parse(content);
@@ -62,16 +60,13 @@ class CustomRulesEngine {
       }
       
       return this.rules.length;
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(`Failed to load custom rules from ${filePath}: ${error.message}`);
     }
   }
 
-  /**
-   * Normalize rule definition
-   */
-  normalizeRule(rule) {
-    const normalized = {
+  private normalizeRule(rule: any): CustomRule {
+    const normalized: CustomRule = {
       id: rule.id || `custom-${Date.now()}`,
       name: rule.name || rule.id,
       description: rule.description || '',
@@ -85,14 +80,12 @@ class CustomRulesEngine {
       enabled: rule.enabled !== false,
     };
 
-    // Handle pattern/patterns
     if (rule.pattern) {
       normalized.patterns = [rule.pattern];
     } else if (rule.patterns) {
       normalized.patterns = Array.isArray(rule.patterns) ? rule.patterns : [rule.patterns];
     }
 
-    // Compile regex patterns
     if (normalized.type === 'regex') {
       normalized.compiledPatterns = normalized.patterns.map(p => {
         try {
@@ -101,17 +94,14 @@ class CustomRulesEngine {
           console.warn(`Invalid regex pattern in rule ${normalized.id}: ${p}`);
           return null;
         }
-      }).filter(Boolean);
+      }).filter((p): p is RegExp => p !== null);
     }
 
     return normalized;
   }
 
-  /**
-   * Normalize severity level
-   */
-  normalizeSeverity(severity) {
-    const map = {
+  private normalizeSeverity(severity: any): string {
+    const map: Record<string, string> = {
       'critical': 'critical',
       'high': 'critical',
       'warning': 'warning',
@@ -122,23 +112,16 @@ class CustomRulesEngine {
     return map[String(severity).toLowerCase()] || 'warning';
   }
 
-  /**
-   * Add a rule
-   */
-  addRule(rule) {
+  addRule(rule: CustomRule): void {
     this.rules.push(rule);
   }
 
-  /**
-   * Check if file matches rule's file patterns
-   */
-  matchesFilePattern(filename, patterns) {
+  private matchesFilePattern(filename: string, patterns: string[]): boolean {
     const basename = path.basename(filename);
     
     for (const pattern of patterns) {
       if (pattern === '*') return true;
       
-      // Convert glob to regex
       const regex = new RegExp(
         '^' + pattern
           .replace(/\./g, '\\.')
@@ -155,22 +138,17 @@ class CustomRulesEngine {
     return false;
   }
 
-  /**
-   * Scan content with custom rules
-   */
-  scan(filePath, content) {
-    const findings = [];
+  scan(filePath: string, content: string): CustomFinding[] {
+    const findings: CustomFinding[] = [];
     const lines = content.split('\n');
 
     for (const rule of this.rules) {
       if (!rule.enabled) continue;
       
-      // Check file pattern match
       if (!this.matchesFilePattern(filePath, rule.filePatterns)) {
         continue;
       }
 
-      // Apply rule based on type
       switch (rule.type) {
         case 'regex':
           findings.push(...this.scanRegex(filePath, content, lines, rule));
@@ -178,7 +156,6 @@ class CustomRulesEngine {
         case 'string':
           findings.push(...this.scanString(filePath, content, lines, rule));
           break;
-        // AST-based rules would go here
         default:
           findings.push(...this.scanRegex(filePath, content, lines, rule));
       }
@@ -187,19 +164,14 @@ class CustomRulesEngine {
     return findings;
   }
 
-  /**
-   * Scan with regex patterns
-   */
-  scanRegex(filePath, content, lines, rule) {
-    const findings = [];
+  private scanRegex(filePath: string, content: string, _lines: string[], rule: CustomRule): CustomFinding[] {
+    const findings: CustomFinding[] = [];
 
     for (const regex of rule.compiledPatterns || []) {
-      // Reset regex state
       regex.lastIndex = 0;
       
       let match;
       while ((match = regex.exec(content)) !== null) {
-        // Find line number
         const beforeMatch = content.substring(0, match.index);
         const lineNumber = beforeMatch.split('\n').length;
         
@@ -215,7 +187,6 @@ class CustomRulesEngine {
           source: 'custom',
         });
         
-        // Prevent infinite loop on zero-width matches
         if (match[0].length === 0) {
           regex.lastIndex++;
         }
@@ -225,11 +196,8 @@ class CustomRulesEngine {
     return findings;
   }
 
-  /**
-   * Scan for exact string matches
-   */
-  scanString(filePath, content, lines, rule) {
-    const findings = [];
+  private scanString(filePath: string, content: string, _lines: string[], rule: CustomRule): CustomFinding[] {
+    const findings: CustomFinding[] = [];
     const contentLower = content.toLowerCase();
 
     for (const pattern of rule.patterns) {
@@ -259,17 +227,11 @@ class CustomRulesEngine {
     return findings;
   }
 
-  /**
-   * Get loaded rules count
-   */
-  getRulesCount() {
+  getRulesCount(): number {
     return this.rules.length;
   }
 
-  /**
-   * Get rules summary
-   */
-  getRulesSummary() {
+  getRulesSummary(): RuleSummary[] {
     return this.rules.map(r => ({
       id: r.id,
       name: r.name,
@@ -279,7 +241,6 @@ class CustomRulesEngine {
   }
 }
 
-// Example rule file template
 const TEMPLATE = `# AgentVet Custom Rules
 # Documentation: https://github.com/taku-tez/agentvet#custom-rules
 
@@ -319,8 +280,9 @@ rules:
     recommendation: "Sanitize user input before shell execution"
 `;
 
-function generateTemplate() {
+export function generateTemplate(): string {
   return TEMPLATE;
 }
 
+// CommonJS compatibility
 module.exports = { CustomRulesEngine, generateTemplate };

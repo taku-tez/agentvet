@@ -1,9 +1,11 @@
+import type { Rule } from "../types.js";
+
 /**
  * Credential Detection Rules
  * Detects hardcoded API keys, tokens, secrets, and sensitive data
  */
 
-const rules = [
+export const rules: Rule[] = [
   // ============================================
   // Cloud Provider Keys
   // ============================================
@@ -580,4 +582,6 @@ const rules = [
   },
 ];
 
+
+// CommonJS compatibility
 module.exports = { rules };

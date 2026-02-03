@@ -2,17 +2,18 @@
  * AgentVet Type Definitions
  */
 
-export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
+export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'warning';
 
 export interface Rule {
   id: string;
-  name: string;
+  name?: string;
   description: string;
-  severity: Severity;
+  severity: Severity | string;
   pattern: RegExp;
   category?: string;
   tags?: string[];
   cwe?: string;
+  recommendation?: string;
   falsePositiveCheck?: (match: RegExpMatchArray, content: string, filePath: string) => boolean;
 }
 

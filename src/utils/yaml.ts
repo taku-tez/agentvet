@@ -3,40 +3,38 @@
  * Handles basic YAML structures without external dependencies
  */
 
-function parse(content) {
+interface StackItem {
+  obj: any;
+  indent: number;
+}
+
+export function parse(content: string): any {
   const lines = content.split('\n');
-  const result = {};
-  const stack = [{ obj: result, indent: -1 }];
-  const _currentArray = null;
-  const _currentArrayIndent = -1;
+  const result: any = {};
+  const stack: StackItem[] = [{ obj: result, indent: -1 }];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
     
-    // Skip empty lines and comments
     if (!trimmed || trimmed.startsWith('#')) {
       continue;
     }
 
-    // Calculate indentation
     const indent = line.search(/\S/);
     
-    // Pop stack until we find parent level
     while (stack.length > 1 && stack[stack.length - 1].indent >= indent) {
       stack.pop();
     }
     
     const parent = stack[stack.length - 1].obj;
 
-    // Handle array items
     if (trimmed.startsWith('- ')) {
       const value = trimmed.slice(2).trim();
       
       if (Array.isArray(parent)) {
         if (value.includes(':')) {
-          // Array of objects
-          const obj = {};
+          const obj: any = {};
           const [key, val] = splitKeyValue(value);
           obj[key] = parseValue(val);
           parent.push(obj);
@@ -48,12 +46,10 @@ function parse(content) {
       continue;
     }
 
-    // Handle key: value
     if (trimmed.includes(':')) {
       const [key, value] = splitKeyValue(trimmed);
       
       if (value === '' || value === null) {
-        // Check if next line is array or nested object
         const nextLine = lines[i + 1];
         if (nextLine && nextLine.trim().startsWith('-')) {
           parent[key] = [];
@@ -71,7 +67,7 @@ function parse(content) {
   return result;
 }
 
-function splitKeyValue(line) {
+function splitKeyValue(line: string): [string, string | null] {
   const colonIndex = line.indexOf(':');
   if (colonIndex === -1) return [line.trim(), null];
   
@@ -81,29 +77,23 @@ function splitKeyValue(line) {
   return [key, value || null];
 }
 
-function parseValue(value) {
+function parseValue(value: string | null): any {
   if (value === null || value === undefined || value === '') {
     return null;
   }
   
-  // Remove quotes
   if ((value.startsWith('"') && value.endsWith('"')) ||
       (value.startsWith("'") && value.endsWith("'"))) {
     return value.slice(1, -1);
   }
   
-  // Boolean
   if (value === 'true') return true;
   if (value === 'false') return false;
-  
-  // Null
   if (value === 'null' || value === '~') return null;
   
-  // Number
   if (/^-?\d+$/.test(value)) return parseInt(value, 10);
   if (/^-?\d+\.\d+$/.test(value)) return parseFloat(value);
   
-  // Array inline [a, b, c]
   if (value.startsWith('[') && value.endsWith(']')) {
     return value.slice(1, -1).split(',').map(v => parseValue(v.trim()));
   }
@@ -111,7 +101,7 @@ function parseValue(value) {
   return value;
 }
 
-function stringify(obj, indent = 0) {
+export function stringify(obj: any, indent: number = 0): string {
   const prefix = '  '.repeat(indent);
   let result = '';
 
@@ -136,4 +126,5 @@ function stringify(obj, indent = 0) {
   return result;
 }
 
+// CommonJS compatibility
 module.exports = { parse, stringify };
