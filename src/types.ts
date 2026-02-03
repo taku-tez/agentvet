@@ -31,6 +31,12 @@ export interface Finding {
   category?: string;
   cwe?: string;
   recommendation?: string;
+  // Reporter aliases (for backwards compatibility)
+  ruleId?: string;
+  title?: string;
+  snippet?: string;
+  evidence?: string;
+  attackScenario?: string;
 }
 
 export interface ScanOptions {

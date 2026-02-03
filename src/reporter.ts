@@ -2,6 +2,8 @@
  * AgentVet Reporter (TypeScript)
  */
 
+import type { Finding, ScanResult, Severity } from './types.js';
+
 /**
  * AgentVet Reporter
  * Output formatting for scan results
@@ -68,10 +70,10 @@ export function printReport(results: any, targetPath: string): string {
   lines.push('');
 
   // Group findings by severity
-  const critical = results.findings.filter(f => f.severity === 'critical');
-  const high = results.findings.filter(f => f.severity === 'high');
-  const warning = results.findings.filter(f => f.severity === 'warning' || f.severity === 'medium');
-  const info = results.findings.filter(f => f.severity === 'info' || f.severity === 'low');
+  const critical = results.findings.filter((f: Finding) => f.severity === 'critical');
+  const high = results.findings.filter((f: Finding) => f.severity === 'high');
+  const warning = results.findings.filter((f: Finding) => f.severity === 'warning' || f.severity === 'medium');
+  const info = results.findings.filter((f: Finding) => f.severity === 'info' || f.severity === 'low');
 
   // Critical findings
   if (critical.length > 0) {
@@ -219,7 +221,7 @@ export function printHTML(results: any, targetPath: string): string {
     info: '#17a2b8',
   };
 
-  const escapeHtml = (str) => {
+  const escapeHtml = (str: string | undefined | null): string => {
     if (!str) return '';
     return String(str)
       .replace(/&/g, '&amp;')
@@ -231,25 +233,25 @@ export function printHTML(results: any, targetPath: string): string {
 
   const findings = results.findings || [];
   const groupedFindings = {
-    critical: findings.filter(f => f.severity === 'critical'),
-    high: findings.filter(f => f.severity === 'high'),
-    warning: findings.filter(f => f.severity === 'warning' || f.severity === 'medium'),
-    info: findings.filter(f => f.severity === 'info' || f.severity === 'low'),
+    critical: findings.filter((f: Finding) => f.severity === 'critical'),
+    high: findings.filter((f: Finding) => f.severity === 'high'),
+    warning: findings.filter((f: Finding) => f.severity === 'warning' || f.severity === 'medium'),
+    info: findings.filter((f: Finding) => f.severity === 'info' || f.severity === 'low'),
   };
 
-  const renderFinding = (finding) => `
+  const renderFinding = (finding: Finding) => `
     <div class="finding severity-${finding.severity}">
       <div class="finding-header">
         <span class="severity-badge" style="background-color: ${severityColors[finding.severity] || '#6c757d'}">
           ${escapeHtml(finding.severity?.toUpperCase())}
         </span>
-        <span class="rule-id">${escapeHtml(finding.ruleId)}</span>
+        <span class="rule-id">${escapeHtml(finding.ruleId || finding.rule)}</span>
       </div>
       <div class="finding-body">
-        <p class="description">${escapeHtml(finding.description || finding.title)}</p>
+        <p class="description">${escapeHtml(finding.description || finding.title || finding.name)}</p>
         <p class="location">📁 ${escapeHtml(finding.file)}${finding.line ? `:${finding.line}` : ''}</p>
-        ${finding.snippet ? `<pre class="snippet">${escapeHtml(finding.snippet)}</pre>` : ''}
-        ${finding.evidence ? `<pre class="evidence">${escapeHtml(finding.evidence)}</pre>` : ''}
+        ${finding.snippet || finding.match ? `<pre class="snippet">${escapeHtml(finding.snippet || finding.match)}</pre>` : ''}
+        ${finding.evidence || finding.context ? `<pre class="evidence">${escapeHtml(finding.evidence || finding.context || '')}</pre>` : ''}
         ${finding.recommendation ? `<p class="recommendation">💡 ${escapeHtml(finding.recommendation)}</p>` : ''}
         ${finding.attackScenario ? `<p class="attack-scenario">⚠️ Attack: ${escapeHtml(finding.attackScenario)}</p>` : ''}
       </div>
@@ -486,22 +488,22 @@ export function printMarkdown(results: any, targetPath: string): string {
 
   // Findings
   const groupedFindings = {
-    critical: results.findings.filter(f => f.severity === 'critical'),
-    high: results.findings.filter(f => f.severity === 'high'),
-    warning: results.findings.filter(f => f.severity === 'warning' || f.severity === 'medium'),
-    info: results.findings.filter(f => f.severity === 'info' || f.severity === 'low'),
+    critical: results.findings.filter((f: Finding) => f.severity === 'critical'),
+    high: results.findings.filter((f: Finding) => f.severity === 'high'),
+    warning: results.findings.filter((f: Finding) => f.severity === 'warning' || f.severity === 'medium'),
+    info: results.findings.filter((f: Finding) => f.severity === 'info' || f.severity === 'low'),
   };
 
-  const renderFinding = (f, index) => {
-    const lines = [];
-    lines.push(`### ${index + 1}. ${f.ruleId}\n`);
+  const renderFinding = (f: Finding, index: number): string => {
+    const lines: string[] = [];
+    lines.push(`### ${index + 1}. ${f.ruleId || f.rule}\n`);
     lines.push(`**File:** \`${f.file}${f.line ? `:${f.line}` : ''}\`\n`);
-    if (f.description || f.title) {
-      lines.push(`**Description:** ${f.description || f.title}\n`);
+    if (f.description || f.title || f.name) {
+      lines.push(`**Description:** ${f.description || f.title || f.name}\n`);
     }
-    if (f.snippet || f.evidence) {
+    if (f.snippet || f.evidence || f.match) {
       lines.push('```');
-      lines.push(f.snippet || f.evidence);
+      lines.push(f.snippet || f.evidence || f.match);
       lines.push('```\n');
     }
     if (f.recommendation) {
@@ -512,22 +514,22 @@ export function printMarkdown(results: any, targetPath: string): string {
 
   if (groupedFindings.critical.length > 0) {
     lines.push('## 🔴 Critical Issues\n');
-    groupedFindings.critical.forEach((f, i) => lines.push(renderFinding(f, i)));
+    groupedFindings.critical.forEach((f: Finding, i: number) => lines.push(renderFinding(f, i)));
   }
 
   if (groupedFindings.high.length > 0) {
     lines.push('## 🟠 High Issues\n');
-    groupedFindings.high.forEach((f, i) => lines.push(renderFinding(f, i)));
+    groupedFindings.high.forEach((f: Finding, i: number) => lines.push(renderFinding(f, i)));
   }
 
   if (groupedFindings.warning.length > 0) {
     lines.push('## 🟡 Warnings\n');
-    groupedFindings.warning.forEach((f, i) => lines.push(renderFinding(f, i)));
+    groupedFindings.warning.forEach((f: Finding, i: number) => lines.push(renderFinding(f, i)));
   }
 
   if (groupedFindings.info.length > 0) {
     lines.push('## 🔵 Info\n');
-    groupedFindings.info.forEach((f, i) => lines.push(renderFinding(f, i)));
+    groupedFindings.info.forEach((f: Finding, i: number) => lines.push(renderFinding(f, i)));
   }
 
   lines.push('\n---\n*Generated by [AgentVet](https://github.com/taku-tez/agentvet)*');
