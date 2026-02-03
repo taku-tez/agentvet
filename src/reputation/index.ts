@@ -1,4 +1,5 @@
 // @ts-nocheck
+
 /**
  * URL/IP Reputation Checker
  * Integrates with VirusTotal and other threat intelligence services
@@ -13,6 +14,9 @@ const RATE_LIMITS = {
 };
 
 class ReputationChecker {
+  options: any;
+  virusTotalKey: any;
+  abuseIPDBKey: any;
   constructor(options = {}) {
     this.options = {
       virustotalKey: options.virustotalKey || process.env.VIRUSTOTAL_API_KEY,

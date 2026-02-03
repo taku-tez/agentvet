@@ -1,4 +1,5 @@
 // @ts-nocheck
+
 /**
  * Dependency Vulnerability Scanner
  * Integrates npm audit, pip-audit, and additional security checks
@@ -29,6 +30,7 @@ const SUSPICIOUS_PATTERNS = [
 ];
 
 class DependencyScanner {
+  options: any;
   constructor(options = {}) {
     this.options = {
       timeout: 120000, // 2 minutes

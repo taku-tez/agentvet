@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Permission Manifest Schema
  * 
@@ -8,10 +7,70 @@
 
 export const MANIFEST_VERSION = '1.0';
 
+// Type definitions
+export interface ManifestPermissions {
+  exec?: string[];
+  network?: string[];
+  files?: string[];
+  tools?: string[];
+  secrets?: string[];
+  elevated?: boolean;
+}
+
+export interface ManifestAudit {
+  auditor: string;
+  date: string;
+  contentHash: string;
+  signature?: string;
+  notes?: string;
+  scope?: 'full' | 'partial' | 'permissions-only';
+}
+
+export interface ManifestTrust {
+  author?: string;
+  audits?: ManifestAudit[];
+  chain?: string[];
+  verified?: boolean;
+}
+
+export interface ManifestRisks {
+  level?: 'low' | 'medium' | 'high' | 'critical';
+  notes?: string[];
+}
+
+export interface PermissionManifest {
+  version: string;
+  name?: string;
+  description?: string;
+  permissions: ManifestPermissions;
+  trust?: ManifestTrust;
+  risks?: ManifestRisks;
+}
+
+export interface JSONSchemaProperty {
+  type: string;
+  description?: string;
+  enum?: string[];
+  items?: JSONSchemaProperty | { type: string };
+  properties?: Record<string, JSONSchemaProperty>;
+  required?: string[];
+  format?: string;
+  default?: unknown;
+  additionalProperties?: boolean;
+}
+
+export interface JSONSchema {
+  $schema: string;
+  type: string;
+  required: string[];
+  properties: Record<string, JSONSchemaProperty>;
+  additionalProperties?: boolean;
+}
+
 /**
  * Permission Manifest Schema (JSON Schema)
  */
-export const manifestSchema = {
+export const manifestSchema: JSONSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   required: ['version', 'permissions'],
@@ -145,7 +204,7 @@ export const manifestSchema = {
 /**
  * Example manifest for documentation
  */
-export const exampleManifest = {
+export const exampleManifest: PermissionManifest = {
   version: '1.0',
   name: 'github-skill',
   description: 'Interact with GitHub using gh CLI',

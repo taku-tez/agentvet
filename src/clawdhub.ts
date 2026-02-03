@@ -1,20 +1,41 @@
-// @ts-nocheck
 /**
  * ClawdHub Integration for AgentVet
  * Safe skill installation with pre-vet security scanning
  */
 
-const { spawn, execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { scan } = require('./index.js');
-const { printReport } = require('./reporter.js');
+import { spawn, execSync, ChildProcess } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import * as readline from 'readline';
+import { scan } from './index.js';
+import { printReport } from './reporter.js';
+
+interface InstallOptions {
+  workdir?: string | null;
+  force?: boolean;
+  version?: string | null;
+  severity?: string;
+  quiet?: boolean;
+  skipVet?: boolean;
+}
+
+interface CheckOptions {
+  severity?: string;
+  quiet?: boolean;
+  format?: 'text' | 'json';
+}
+
+interface ClawdhubResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}
 
 /**
  * Check if clawdhub CLI is installed
  */
-function checkClawdhubInstalled() {
+export function checkClawdhubInstalled(): boolean {
   try {
     execSync('which clawdhub', { stdio: 'pipe' });
     return true;
@@ -26,13 +47,11 @@ function checkClawdhubInstalled() {
 /**
  * Get the workspace directory (same logic as clawdhub)
  */
-function getWorkspace() {
-  // Check CLAWDHUB_WORKDIR env
+export function getWorkspace(): string {
   if (process.env.CLAWDHUB_WORKDIR) {
     return process.env.CLAWDHUB_WORKDIR;
   }
   
-  // Check for OpenClaw workspace config
   const configPaths = [
     path.join(os.homedir(), '.openclaw', 'openclaw.json'),
     path.join(os.homedir(), '.openclaw', 'config.json'),
@@ -51,16 +70,13 @@ function getWorkspace() {
     }
   }
   
-  // Default to current directory
   return process.cwd();
 }
 
 /**
  * Install a skill from ClawdHub with security vetting
- * @param {string} slug - Skill slug to install
- * @param {object} options - Installation options
  */
-async function installSkill(slug, options = {}) {
+export async function installSkill(slug: string, options: InstallOptions = {}): Promise<void> {
   const {
     workdir,
     force = false,
@@ -70,24 +86,20 @@ async function installSkill(slug, options = {}) {
     skipVet = false,
   } = options;
   
-  // Get workspace (handle null/undefined from options)
   const targetWorkdir = workdir || getWorkspace();
 
   console.log(`🔍 AgentVet: Installing skill "${slug}" with security vetting...\n`);
 
-  // Check clawdhub is installed
   if (!checkClawdhubInstalled()) {
     console.error('❌ clawdhub CLI not found. Install it with: npm install -g clawdhub');
     process.exit(2);
   }
 
-  // Create temp directory for download
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentvet-install-'));
   const tmpSkillsDir = path.join(tmpDir, 'skills');
   fs.mkdirSync(tmpSkillsDir, { recursive: true });
 
   try {
-    // Step 1: Download to temp directory
     console.log('📥 Downloading skill to temporary directory...');
     const downloadArgs = ['install', slug, '--workdir', tmpDir];
     if (version) downloadArgs.push('--version', version);
@@ -99,10 +111,8 @@ async function installSkill(slug, options = {}) {
       process.exit(2);
     }
 
-    // Find the downloaded skill
     const skillPath = path.join(tmpSkillsDir, slug);
     if (!fs.existsSync(skillPath)) {
-      // Try to find any skill directory
       const skills = fs.readdirSync(tmpSkillsDir).filter(f => 
         fs.statSync(path.join(tmpSkillsDir, f)).isDirectory()
       );
@@ -114,30 +124,25 @@ async function installSkill(slug, options = {}) {
 
     const actualSkillPath = fs.existsSync(skillPath) ? skillPath : path.join(tmpSkillsDir, fs.readdirSync(tmpSkillsDir)[0]);
 
-    // Step 2: Security scan
     if (!skipVet) {
       console.log('\n🔒 Running security scan...\n');
       
       const results = await scan(actualSkillPath, {
         yara: true,
         checkPermissions: true,
-        checkDeps: true,
       });
 
-      // Print report
       if (!quiet) {
-        printReport(results);
+        console.log(printReport(results, actualSkillPath));
       }
 
-      // Check for critical/high issues
-      const criticalCount = results.findings.filter(f => f.severity === 'critical').length;
-      const highCount = results.findings.filter(f => f.severity === 'high').length;
+      const criticalCount = results.findings.filter((f: { severity: string }) => f.severity === 'critical').length;
+      const highCount = results.findings.filter((f: { severity: string }) => f.severity === 'high').length;
       
-      // Determine if we should block
       const severityLevels = ['critical', 'high', 'medium', 'low', 'info'];
       const severityIndex = severityLevels.indexOf(severity);
       
-      const blockingFindings = results.findings.filter(f => {
+      const blockingFindings = results.findings.filter((f: { severity: string }) => {
         const findingSeverityIndex = severityLevels.indexOf(f.severity);
         return findingSeverityIndex <= severityIndex;
       });
@@ -148,15 +153,13 @@ async function installSkill(slug, options = {}) {
         console.log(`   High: ${highCount}`);
         console.log(`   Total blocking (>=${severity}): ${blockingFindings.length}`);
         
-        // In interactive mode, ask for confirmation
         if (process.stdin.isTTY && !force) {
-          const readline = require('readline');
           const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout,
           });
 
-          const answer = await new Promise(resolve => {
+          const answer = await new Promise<string>(resolve => {
             rl.question('\n❓ Install anyway? (y/N): ', resolve);
           });
           rl.close();
@@ -176,28 +179,24 @@ async function installSkill(slug, options = {}) {
       }
     }
 
-    // Step 3: Move to actual workspace
     console.log('📦 Installing to workspace...');
     const destSkillsDir = path.join(targetWorkdir, 'skills');
     const destPath = path.join(destSkillsDir, path.basename(actualSkillPath));
 
     fs.mkdirSync(destSkillsDir, { recursive: true });
 
-    // Check if destination exists
     if (fs.existsSync(destPath) && !force) {
       console.error(`❌ Skill already exists at ${destPath}`);
       console.error('   Use --force to overwrite.');
       process.exit(2);
     }
 
-    // Copy skill to destination
     copyDirectory(actualSkillPath, destPath);
 
     console.log(`\n✅ Skill "${slug}" installed successfully to ${destPath}`);
     console.log('\n💡 Restart OpenClaw to load the new skill.');
 
   } finally {
-    // Cleanup temp directory
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 }
@@ -205,9 +204,9 @@ async function installSkill(slug, options = {}) {
 /**
  * Run clawdhub CLI command
  */
-function runClawdhub(args) {
+function runClawdhub(args: string[]): Promise<ClawdhubResult> {
   return new Promise((resolve) => {
-    const proc = spawn('clawdhub', args, { 
+    const proc: ChildProcess = spawn('clawdhub', args, { 
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, NO_COLOR: '1' }
     });
@@ -215,14 +214,14 @@ function runClawdhub(args) {
     let stdout = '';
     let stderr = '';
     
-    proc.stdout.on('data', (data) => { stdout += data.toString(); });
-    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+    proc.stdout?.on('data', (data: Buffer) => { stdout += data.toString(); });
+    proc.stderr?.on('data', (data: Buffer) => { stderr += data.toString(); });
     
     proc.on('close', (code) => {
       resolve({ code, stdout, stderr });
     });
     
-    proc.on('error', (err) => {
+    proc.on('error', (err: Error) => {
       resolve({ code: 2, stdout: '', stderr: err.message });
     });
   });
@@ -231,7 +230,7 @@ function runClawdhub(args) {
 /**
  * Copy directory recursively
  */
-function copyDirectory(src, dest) {
+function copyDirectory(src: string, dest: string): void {
   if (fs.existsSync(dest)) {
     fs.rmSync(dest, { recursive: true });
   }
@@ -253,9 +252,8 @@ function copyDirectory(src, dest) {
 /**
  * Scan a local skill directory
  */
-async function checkSkill(skillPath, options = {}) {
+export async function checkSkill(skillPath: string, options: CheckOptions = {}): Promise<unknown> {
   const {
-    severity: _severity = 'info',
     quiet = false,
     format = 'text',
   } = options;
@@ -270,35 +268,25 @@ async function checkSkill(skillPath, options = {}) {
   const results = await scan(skillPath, {
     yara: true,
     checkPermissions: true,
-    checkDeps: true,
   });
 
-  // Print report based on format
   if (!quiet) {
     if (format === 'json') {
       console.log(JSON.stringify(results, null, 2));
     } else {
-      printReport(results);
+      console.log(printReport(results, skillPath));
     }
   }
 
-  // Summary
-  const criticalCount = results.findings.filter(f => f.severity === 'critical').length;
-  const highCount = results.findings.filter(f => f.severity === 'high').length;
+  const criticalCount = results.findings.filter((f: { severity: string }) => f.severity === 'critical').length;
+  const highCount = results.findings.filter((f: { severity: string }) => f.severity === 'high').length;
   
   console.log('\n📊 Summary:');
-  console.log(`   Files scanned: ${results.filesScanned || 0}`);
+  console.log(`   Files scanned: ${results.scannedFiles || 0}`);
   console.log(`   Total findings: ${results.findings.length}`);
   console.log(`   Critical: ${criticalCount}`);
   console.log(`   High: ${highCount}`);
 
-  // Exit code based on severity
-  if (criticalCount > 0) {
-    process.exit(1);
-  }
-  
-  return results;
-  // Exit code based on severity
   if (criticalCount > 0) {
     process.exit(1);
   }
@@ -306,5 +294,4 @@ async function checkSkill(skillPath, options = {}) {
   return results;
 }
 
-export { installSkill, checkSkill, checkClawdhubInstalled, getWorkspace };
 module.exports = { installSkill, checkSkill, checkClawdhubInstalled, getWorkspace };

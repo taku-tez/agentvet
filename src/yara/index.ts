@@ -1,4 +1,5 @@
 // @ts-nocheck
+
 /**
  * YARA Integration for AgentVet
  * Uses yara CLI if available, falls back to JS-based pattern matching
@@ -12,6 +13,9 @@ const path = require('path');
 const RULES_DIR = path.join(__dirname, '../../yara');
 
 class YaraScanner {
+  options: any;
+  rules: any;
+  nativeAvailable: boolean = false;
   constructor(options = {}) {
     this.rulesDir = options.rulesDir || RULES_DIR;
     this.yaraAvailable = this.checkYaraInstalled();

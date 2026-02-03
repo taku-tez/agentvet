@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Trust Chain Verification
  * 
@@ -9,37 +8,80 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import type { PermissionManifest, ManifestAudit } from './schema.js';
 
 /**
  * Trust levels for auditors/sources
  */
 export const TRUST_LEVELS = {
-  SELF: 0,           // 自己宣言のみ
-  COMMUNITY: 1,      // コミュニティメンバーによる監査
-  ORGANIZATION: 2,   // 組織による監査
-  REGISTRY: 3,       // 公式レジストリによる検証
-  OFFICIAL: 4        // 公式スキル
-};
+  SELF: 0,
+  COMMUNITY: 1,
+  ORGANIZATION: 2,
+  REGISTRY: 3,
+  OFFICIAL: 4
+} as const;
+
+export type TrustLevel = typeof TRUST_LEVELS[keyof typeof TRUST_LEVELS];
+
+export interface AuditorInfo {
+  level: TrustLevel;
+  name: string;
+}
 
 /**
  * Known trusted auditors/registries
  */
-export const KNOWN_AUDITORS = {
+export const KNOWN_AUDITORS: Record<string, AuditorInfo> = {
   'clawdhub:official': { level: TRUST_LEVELS.OFFICIAL, name: 'ClawdHub Official' },
   'clawdhub:verified': { level: TRUST_LEVELS.REGISTRY, name: 'ClawdHub Verified' },
   'org:openclaw': { level: TRUST_LEVELS.ORGANIZATION, name: 'OpenClaw Team' },
   'org:acme-corp': { level: TRUST_LEVELS.ORGANIZATION, name: 'Acme Corp.' },
-  // ユーザーは動的に追加可能
 };
+
+export interface ChainEntry {
+  entity: string;
+  role: 'author' | 'auditor' | 'chain';
+  level: TrustLevel;
+  name: string;
+  date?: string;
+}
+
+export interface AuditResult {
+  auditor: string;
+  date: string;
+  scope: string;
+  level: TrustLevel;
+  name: string;
+  hashVerified: boolean;
+}
+
+export interface TrustVerificationResult {
+  trustLevel: TrustLevel;
+  trustScore: number;
+  verified: boolean;
+  audits: AuditResult[];
+  warnings: string[];
+  chain: ChainEntry[];
+}
+
+export interface VerifyOptions {
+  currentHash?: string;
+}
+
+export interface CreateAuditOptions {
+  auditor: string;
+  contentHash: string;
+  scope?: 'full' | 'partial' | 'permissions-only';
+  notes?: string;
+}
 
 /**
  * Calculate content hash for a skill directory
  */
-export async function calculateContentHash(skillPath) {
+export async function calculateContentHash(skillPath: string): Promise<string> {
   const hash = crypto.createHash('sha256');
   const files = await getSkillFiles(skillPath);
   
-  // Sort files for deterministic hash
   files.sort();
   
   for (const file of files) {
@@ -54,13 +96,12 @@ export async function calculateContentHash(skillPath) {
 /**
  * Get all relevant files in a skill directory
  */
-async function getSkillFiles(dir, files = []) {
+async function getSkillFiles(dir: string, files: string[] = []): Promise<string[]> {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     
-    // Skip hidden files, node_modules, etc.
     if (entry.name.startsWith('.') || 
         entry.name === 'node_modules' ||
         entry.name === 'package-lock.json') {
@@ -80,8 +121,8 @@ async function getSkillFiles(dir, files = []) {
 /**
  * Verify trust chain for a manifest
  */
-export function verifyTrustChain(manifest, options = {}) {
-  const result = {
+export function verifyTrustChain(manifest: PermissionManifest | null, options: VerifyOptions = {}): TrustVerificationResult {
+  const result: TrustVerificationResult = {
     trustLevel: TRUST_LEVELS.SELF,
     trustScore: 0,
     verified: false,
@@ -113,7 +154,7 @@ export function verifyTrustChain(manifest, options = {}) {
     for (const audit of trust.audits) {
       const auditorInfo = resolveAuditor(audit.auditor);
       
-      const auditResult = {
+      const auditResult: AuditResult = {
         auditor: audit.auditor,
         date: audit.date,
         scope: audit.scope || 'full',
@@ -122,7 +163,6 @@ export function verifyTrustChain(manifest, options = {}) {
         hashVerified: false
       };
 
-      // Verify content hash if provided
       if (audit.contentHash && options.currentHash) {
         auditResult.hashVerified = audit.contentHash === options.currentHash;
         if (!auditResult.hashVerified) {
@@ -132,7 +172,6 @@ export function verifyTrustChain(manifest, options = {}) {
         }
       }
 
-      // Check audit freshness (warn if older than 6 months)
       if (audit.date) {
         const auditDate = new Date(audit.date);
         const monthsOld = (Date.now() - auditDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
@@ -152,7 +191,6 @@ export function verifyTrustChain(manifest, options = {}) {
         date: audit.date
       });
 
-      // Use highest audit level
       if (auditorInfo.level > result.trustLevel) {
         result.trustLevel = auditorInfo.level;
       }
@@ -191,13 +229,11 @@ export function verifyTrustChain(manifest, options = {}) {
 /**
  * Resolve auditor/entity to trust level
  */
-function resolveAuditor(auditor) {
-  // Check known auditors
+function resolveAuditor(auditor: string): AuditorInfo {
   if (KNOWN_AUDITORS[auditor]) {
     return KNOWN_AUDITORS[auditor];
   }
 
-  // Parse auditor format
   const [type, name] = auditor.split(':');
   
   switch (type) {
@@ -217,7 +253,7 @@ function resolveAuditor(auditor) {
 /**
  * Create an audit entry for signing
  */
-export function createAuditEntry(options) {
+export function createAuditEntry(options: CreateAuditOptions): ManifestAudit {
   const { auditor, contentHash, scope = 'full', notes = '' } = options;
   
   return {
@@ -232,8 +268,8 @@ export function createAuditEntry(options) {
 /**
  * Format trust chain for display
  */
-export function formatTrustChain(trustResult) {
-  const lines = [];
+export function formatTrustChain(trustResult: TrustVerificationResult): string {
+  const lines: string[] = [];
   const levelNames = ['Self', 'Community', 'Organization', 'Registry', 'Official'];
   
   lines.push(`Trust Level: ${levelNames[trustResult.trustLevel]} (score: ${trustResult.trustScore})`);

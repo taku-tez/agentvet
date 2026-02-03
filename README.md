@@ -216,6 +216,13 @@ Supports gitignore-style patterns:
 
 ---
 
+## Documentation
+
+- [Custom Rules Guide](docs/CUSTOM_RULES.md) - Create organization-specific rules
+- [API Reference](docs/API.md) - Programmatic usage
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
+
+
 ## CI/CD Integration
 
 ### GitHub Actions (Recommended)

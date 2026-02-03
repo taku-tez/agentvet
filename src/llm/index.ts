@@ -1,4 +1,5 @@
 // @ts-nocheck
+
 /**
  * LLM Intent Analysis (TypeScript)
  */
@@ -180,6 +181,9 @@ const PROVIDERS = {
 };
 
 class LLMAnalyzer {
+  options: any;
+  provider: any;
+  model: any;
   constructor(options = {}) {
     this.options = {
       provider: options.provider || this.detectProvider(options),

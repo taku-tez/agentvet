@@ -1,26 +1,59 @@
-// @ts-nocheck
 /**
  * Permission Manifest Validator
  * 
  * マニフェストの検証と、実際のスキル内容との照合。
  */
 
-import Ajv from 'ajv';
+import Ajv, { ErrorObject } from 'ajv';
 import addFormats from 'ajv-formats';
-import { manifestSchema, MANIFEST_VERSION } from './schema.js';
+import { manifestSchema, MANIFEST_VERSION, PermissionManifest, ManifestPermissions } from './schema.js';
 
 const ajv = new Ajv({ allErrors: true });
 addFormats(ajv);
 
 const validateSchema = ajv.compile(manifestSchema);
 
+// Type definitions
+export interface ValidationResult {
+  valid: boolean;
+  errors: ErrorObject[];
+}
+
+export interface DetectedUsage {
+  commands?: string[];
+  urls?: string[];
+  fileAccess?: Array<{ mode: string; path: string }>;
+  secrets?: string[];
+  tools?: string[];
+  elevated?: boolean;
+}
+
+export interface PermissionIssue {
+  type: string;
+  value: string | boolean;
+  severity?: string;
+  message?: string;
+}
+
+export interface ComparisonResult {
+  undeclared: PermissionIssue[];
+  unused: PermissionIssue[];
+  matches: PermissionIssue[];
+}
+
+export interface GenerateOptions {
+  name?: string;
+  description?: string;
+  author?: string;
+}
+
 /**
  * Validate manifest against schema
  */
-export function validateManifest(manifest) {
+export function validateManifest(manifest: unknown): ValidationResult {
   const valid = validateSchema(manifest);
   return {
-    valid,
+    valid: valid as boolean,
     errors: validateSchema.errors || []
   };
 }
@@ -29,14 +62,14 @@ export function validateManifest(manifest) {
  * Compare manifest permissions with actual detected usage
  * Returns undeclared permissions (security risk) and unused declarations (bloat)
  */
-export function comparePermissions(manifest, detected) {
-  const issues = {
-    undeclared: [], // 宣言されていないが使用されている（危険）
-    unused: [],     // 宣言されているが使用されていない（過剰宣言）
-    matches: []     // 正しく宣言されている
+export function comparePermissions(manifest: PermissionManifest | null, detected: DetectedUsage): ComparisonResult {
+  const issues: ComparisonResult = {
+    undeclared: [],
+    unused: [],
+    matches: []
   };
 
-  const declared = manifest?.permissions || {};
+  const declared: ManifestPermissions = manifest?.permissions || {};
   
   // Check exec commands
   if (detected.commands) {
@@ -126,7 +159,7 @@ export function comparePermissions(manifest, detected) {
 /**
  * Simple pattern matching (supports * wildcard)
  */
-function matchPattern(value, pattern) {
+function matchPattern(value: string, pattern: string): boolean {
   if (pattern === '*') return true;
   if (pattern.includes('*')) {
     const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
@@ -138,7 +171,7 @@ function matchPattern(value, pattern) {
 /**
  * Match host against pattern (supports *.domain.com)
  */
-function matchHostPattern(host, pattern) {
+function matchHostPattern(host: string, pattern: string): boolean {
   if (pattern === '*') return true;
   if (pattern.startsWith('*.')) {
     const domain = pattern.slice(2);
@@ -150,9 +183,7 @@ function matchHostPattern(host, pattern) {
 /**
  * Match file access pattern
  */
-function matchFilePattern(actual, declared) {
-  // actual: "read:/path/to/file"
-  // declared: "read:./", "write:./output", etc.
+function matchFilePattern(actual: string, declared: string): boolean {
   const [actualMode, actualPath] = actual.split(':');
   const [declaredMode, declaredPath] = declared.split(':');
   
@@ -160,9 +191,8 @@ function matchFilePattern(actual, declared) {
     return false;
   }
   
-  // Normalize paths
-  const normalizedActual = actualPath.replace(/^\.\//, '');
-  const normalizedDeclared = declaredPath.replace(/^\.\//, '');
+  const normalizedActual = actualPath?.replace(/^\.\//, '') || '';
+  const normalizedDeclared = declaredPath?.replace(/^\.\//, '') || '';
   
   if (normalizedDeclared === '' || normalizedDeclared === '*') {
     return true;
@@ -175,14 +205,14 @@ function matchFilePattern(actual, declared) {
 /**
  * Extract host from URL
  */
-function extractHost(url) {
+function extractHost(url: string): string | null {
   try {
-    if (!url.startsWith('http')) {
-      url = 'https://' + url;
+    let normalizedUrl = url;
+    if (!normalizedUrl.startsWith('http')) {
+      normalizedUrl = 'https://' + normalizedUrl;
     }
-    return new URL(url).hostname;
+    return new URL(normalizedUrl).hostname;
   } catch {
-    // Try to extract domain from partial URL
     const match = url.match(/(?:https?:\/\/)?([^\/\s:]+)/);
     return match ? match[1] : null;
   }
@@ -191,7 +221,7 @@ function extractHost(url) {
 /**
  * Check if host is suspicious (exfiltration endpoints)
  */
-function isSuspiciousHost(host) {
+function isSuspiciousHost(host: string): boolean {
   const suspiciousPatterns = [
     'webhook.site',
     'requestbin',
@@ -209,14 +239,14 @@ function isSuspiciousHost(host) {
 /**
  * Generate a permission manifest from detected usage
  */
-export function generateManifest(detected, options = {}) {
+export function generateManifest(detected: DetectedUsage, options: GenerateOptions = {}): PermissionManifest {
   return {
     version: MANIFEST_VERSION,
     name: options.name || 'unknown-skill',
     description: options.description || 'Auto-generated manifest',
     permissions: {
       exec: [...new Set(detected.commands || [])],
-      network: [...new Set((detected.urls || []).map(extractHost).filter(Boolean))],
+      network: [...new Set((detected.urls || []).map(extractHost).filter((h): h is string => h !== null))],
       files: [...new Set((detected.fileAccess || []).map(a => `${a.mode}:${a.path}`))],
       tools: [...new Set(detected.tools || [])],
       secrets: [...new Set(detected.secrets || [])],
@@ -235,12 +265,15 @@ export function generateManifest(detected, options = {}) {
   };
 }
 
-function calculateRiskLevel(detected) {
+function calculateRiskLevel(detected: DetectedUsage): 'low' | 'medium' | 'high' | 'critical' {
   let score = 0;
   if (detected.elevated) score += 3;
   if (detected.commands?.some(c => ['rm', 'curl', 'wget', 'eval'].includes(c))) score += 2;
-  if (detected.urls?.some(u => isSuspiciousHost(extractHost(u)))) score += 3;
-  if (detected.secrets?.length > 3) score += 1;
+  if (detected.urls?.some(u => {
+    const host = extractHost(u);
+    return host ? isSuspiciousHost(host) : false;
+  })) score += 3;
+  if ((detected.secrets?.length || 0) > 3) score += 1;
   
   if (score >= 4) return 'critical';
   if (score >= 3) return 'high';
@@ -248,16 +281,16 @@ function calculateRiskLevel(detected) {
   return 'low';
 }
 
-function generateRiskNotes(detected) {
-  const notes = [];
+function generateRiskNotes(detected: DetectedUsage): string[] {
+  const notes: string[] = [];
   if (detected.elevated) {
     notes.push('Requires elevated permissions - review carefully');
   }
   if (detected.commands?.includes('curl') || detected.commands?.includes('wget')) {
     notes.push('Downloads external content - verify sources');
   }
-  if (detected.secrets?.length > 0) {
-    notes.push(`Uses ${detected.secrets.length} secret(s): ${detected.secrets.join(', ')}`);
+  if ((detected.secrets?.length || 0) > 0) {
+    notes.push(`Uses ${detected.secrets!.length} secret(s): ${detected.secrets!.join(', ')}`);
   }
   return notes;
 }
