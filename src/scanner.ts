@@ -55,6 +55,8 @@ const permissions = require('./rules/permissions.js');
 const mcp = require('./rules/mcp.js');
 const agents = require('./rules/agents.js');
 const cicd = require('./rules/cicd.js');
+const pickle = require('./rules/pickle.js');
+const mcpDiscovery = require('./rules/mcp-discovery.js');
 
 // Optional modules
 let YaraScanner: any = null;
@@ -230,6 +232,8 @@ export class Scanner {
       ...mcp.rules,
       ...agents.rules,
       ...cicd.rules,
+      ...pickle.rules,
+      ...mcpDiscovery.rules,
     ];
     
     this.ignorePatterns = [];

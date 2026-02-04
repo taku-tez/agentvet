@@ -951,4 +951,134 @@ secrets/
     }
   });
 
+  // Pickle deserialization detection tests
+  test('should detect unsafe pickle.load in Python', async () => {
+    setup();
+    try {
+      writeTestFile('loader.py', `
+import pickle
+with open('model.pkl', 'rb') as f:
+    model = pickle.load(f)
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'pickle-unsafe-load'),
+        'Should detect unsafe pickle.load()'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect unsafe torch.load', async () => {
+    setup();
+    try {
+      writeTestFile('model_loader.py', `
+import torch
+model = torch.load('model.pt')
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'torch-unsafe-load'),
+        'Should detect unsafe torch.load()'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect TensorFlow Lambda layers', async () => {
+    setup();
+    try {
+      writeTestFile('model.py', `
+from keras.layers import Lambda
+layer = Lambda(lambda x: x * 2)
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'tensorflow-lambda-layer'),
+        'Should detect TensorFlow Lambda layer'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  // MCP server discovery tests
+  test('should detect MCP server in package.json', async () => {
+    setup();
+    try {
+      writeTestFile('package.json', JSON.stringify({
+        name: "@company/weather-mcp-server",
+        version: "1.0.0"
+      }));
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'mcp-server-package-json'),
+        'Should detect MCP server in package.json'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect MCP server Python import', async () => {
+    setup();
+    try {
+      writeTestFile('server.py', `
+from mcp.server import Server
+
+app = Server("my-mcp-server")
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'mcp-server-python-import'),
+        'Should detect MCP server Python import'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect LangChain agent', async () => {
+    setup();
+    try {
+      writeTestFile('agent.py', `
+from langchain.agents import create_react_agent
+agent = create_react_agent(llm, tools, prompt)
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'langchain-agent'),
+        'Should detect LangChain agent'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect AI agent/bot package', async () => {
+    setup();
+    try {
+      writeTestFile('package.json', JSON.stringify({
+        name: "my-discord-bot-agent",
+        version: "1.0.0"
+      }));
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'ai-agent-package-detected'),
+        'Should detect AI agent/bot package'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
 });
