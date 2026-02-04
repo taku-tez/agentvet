@@ -4,7 +4,7 @@
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { rules } = require('../../src/rules/cicd.js');
+const { rules } = require('../../dist/rules/cicd.js');
 
 describe('CI/CD Security Rules', () => {
   

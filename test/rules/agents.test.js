@@ -4,7 +4,13 @@
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { rules } = require('../../src/rules/agents.js');
+// Use dist/ for TypeScript build output
+let rules;
+try {
+  ({ rules } = require('../../dist/rules/agents.js'));
+} catch {
+  ({ rules } = require('../../src/rules/agents.js'));
+}
 
 describe('Agent Security Rules', () => {
   
@@ -113,6 +119,41 @@ describe('Agent Security Rules', () => {
     test('should detect security evasion', () => {
       testRule('agent-security-evasion', 'evade security scans', true);
       testRule('agent-security-evasion', 'bypass security checks', true);
+    });
+  });
+
+
+  // Unicode attack tests
+  describe('Unicode Attack Detection', () => {
+    test('should detect invisible zero-width characters', () => {
+      testRule('agent-invisible-text', 'ignore\u200Ball previous', true);
+    });
+
+    test('should detect RTL override character', () => {
+      testRule('agent-rtl-override', 'file\u202Efdp.exe', true);
+    });
+
+    test('should not flag normal text', () => {
+      testRule('agent-invisible-text', 'normal text here', false);
+    });
+  });
+
+  // AI Framework detection tests  
+  describe('AI Framework Detection', () => {
+    test('should detect Semantic Kernel', () => {
+      testRule('ai-framework-semantic-kernel', 'from semantic_kernel import Kernel', true);
+    });
+
+    test('should detect LlamaIndex', () => {
+      testRule('ai-framework-llamaindex', 'from llama_index import VectorStoreIndex', true);
+    });
+
+    test('should detect DSPy', () => {
+      testRule('ai-framework-dspy', 'import dspy', true);
+    });
+
+    test('should detect Haystack', () => {
+      testRule('ai-framework-haystack', 'from haystack import Pipeline', true);
     });
   });
 

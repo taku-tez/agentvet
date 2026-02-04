@@ -4,7 +4,7 @@
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { rules } = require('../../src/rules/credentials.js');
+const { rules } = require('../../dist/rules/credentials.js');
 
 describe('Credentials Rules', () => {
   

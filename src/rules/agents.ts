@@ -518,6 +518,123 @@ export const rules: Rule[] = [
     pattern: /(?:3x3c|3v4l|d3l3t3|r3m0v3|k1ll|h4ck|3xf1l|l34k)/gi,
     recommendation: 'Review obfuscated text for hidden commands.',
   },
+
+  // ============================================
+  // AI Framework Detection (Asset Inventory)
+  // ============================================
+  {
+    id: 'ai-framework-semantic-kernel',
+    severity: 'info',
+    description: 'Microsoft Semantic Kernel detected',
+    pattern: /(?:from\s+semantic_kernel|import\s+(?:\{[^}]*)?(?:Kernel|SemanticKernel)|@microsoft\/semantic-kernel|semantic-kernel)/gi,
+    recommendation: 'AI framework detected. Ensure proper security controls.',
+  },
+  {
+    id: 'ai-framework-haystack',
+    severity: 'info',
+    description: 'Haystack AI framework detected',
+    pattern: /(?:from\s+haystack|import\s+(?:\{[^}]*)?(?:Pipeline|DocumentStore)|@haystack|haystack-ai)/gi,
+    recommendation: 'AI framework detected. Review pipeline configurations.',
+  },
+  {
+    id: 'ai-framework-llamaindex',
+    severity: 'info',
+    description: 'LlamaIndex framework detected',
+    pattern: /(?:from\s+llama_index|import\s+(?:\{[^}]*)?(?:VectorStoreIndex|SimpleDirectoryReader)|llamaindex)/gi,
+    recommendation: 'AI framework detected. Review index configurations.',
+  },
+  {
+    id: 'ai-framework-guidance',
+    severity: 'info',
+    description: 'Microsoft Guidance framework detected',
+    pattern: /(?:import\s+guidance|from\s+guidance|guidance\.models)/gi,
+    recommendation: 'AI framework detected. Review guidance templates.',
+  },
+  {
+    id: 'ai-framework-dspy',
+    severity: 'info',
+    description: 'DSPy framework detected',
+    pattern: /(?:import\s+dspy|from\s+dspy|dspy\.(?:Module|Signature|ChainOfThought))/gi,
+    recommendation: 'AI framework detected. Review DSPy modules.',
+  },
+  {
+    id: 'ai-framework-instructor',
+    severity: 'info',
+    description: 'Instructor library detected',
+    pattern: /(?:import\s+instructor|from\s+instructor|instructor\.(?:patch|from_openai))/gi,
+    recommendation: 'Structured output library detected.',
+  },
+  {
+    id: 'ai-framework-outlines',
+    severity: 'info',
+    description: 'Outlines structured generation detected',
+    pattern: /(?:import\s+outlines|from\s+outlines|outlines\.(?:generate|models))/gi,
+    recommendation: 'Structured generation library detected.',
+  },
+
+  // ============================================
+  // Unicode/Encoding Attacks
+  // ============================================
+  {
+    id: 'agent-unicode-homoglyph',
+    severity: 'critical',
+    description: 'Unicode homoglyph attack (lookalike characters)',
+    // Detect mixed scripts that could be deceptive
+    pattern: /[\u0400-\u04FF][\w]*[\u0041-\u005A]|[\u0041-\u005A][\w]*[\u0400-\u04FF]/g,
+    recommendation: 'Mixed Cyrillic/Latin characters detected. Check for homoglyph attacks.',
+  },
+  {
+    id: 'agent-invisible-text',
+    severity: 'critical',
+    description: 'Invisible/zero-width characters detected',
+    pattern: /[\u200B-\u200F\u2060-\u206F\uFEFF\u00AD]/g,
+    recommendation: 'Remove invisible characters that may hide malicious content.',
+  },
+  {
+    id: 'agent-rtl-override',
+    severity: 'critical',
+    description: 'Right-to-left override character (filename spoofing)',
+    pattern: /[\u202E\u202D\u202C]/g,
+    recommendation: 'Remove RTL override characters used for spoofing.',
+  },
+  // Note: Unicode tag characters (U+E0000-U+E007F) detection removed
+  // due to JavaScript regex limitations with high code points
+
+  // ============================================
+  // Tokenizer/Encoding Exploits
+  // ============================================
+  {
+    id: 'agent-token-smuggling',
+    severity: 'critical',
+    description: 'Potential token smuggling pattern',
+    pattern: /\u0000|\x00|\\x00|\\u0000/g,
+    recommendation: 'Null bytes detected. May be used for token manipulation.',
+  },
+  {
+    id: 'agent-glitch-token',
+    severity: 'warning',
+    description: 'Known glitch token pattern',
+    pattern: /(?:SolidGoldMagikarp|StreamerBot|TheNitromeFan| davidjl|RandomRedditor)/g,
+    recommendation: 'Known glitch token detected. May cause unexpected behavior.',
+  },
+
+  // ============================================
+  // Safer Patterns (reduce false positives)
+  // ============================================
+  {
+    id: 'ai-safe-pickle-usage',
+    severity: 'info',
+    description: 'Safe pickle usage with weights_only=True',
+    pattern: /torch\.load\s*\([^)]*weights_only\s*=\s*True/gi,
+    recommendation: 'Good: Using weights_only=True for safe loading.',
+  },
+  {
+    id: 'ai-safetensors-preferred',
+    severity: 'info',
+    description: 'SafeTensors format detected (recommended)',
+    pattern: /(?:from\s+safetensors|safetensors\.torch|\.safetensors\b)/gi,
+    recommendation: 'Good: SafeTensors is the recommended safe format.',
+  },
 ];
 
 
