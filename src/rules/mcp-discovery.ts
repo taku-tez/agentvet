@@ -79,6 +79,42 @@ export const rules: Rule[] = [
     recommendation: 'MCP server using HTTP/SSE transport. Ensure proper authentication and HTTPS.',
   },
 
+  // MCP server without authentication (CRITICAL - per CVE-2026-0755 and MCP security advisories)
+  {
+    id: 'mcp-unauthenticated-server',
+    severity: 'critical',
+    description: 'MCP HTTP server may lack authentication',
+    pattern: /(?:serve_sse|serve_http|SSEServerTransport|HTTPServerTransport)\s*\([^)]*\)(?![\s\S]{0,200}(?:auth|token|apiKey|bearer|verify|authenticate))/gi,
+    recommendation: 'MCP HTTP servers MUST implement authentication. See CVE-2026-0755. Add API key validation or OAuth.',
+  },
+
+  // MCP server on all interfaces (0.0.0.0)
+  {
+    id: 'mcp-public-binding',
+    severity: 'critical',
+    description: 'MCP server binds to all interfaces (publicly accessible)',
+    pattern: /(?:host|bind)\s*[=:]\s*["']?(?:0\.0\.0\.0|::)["']?/gi,
+    recommendation: 'MCP server is publicly accessible. Bind to 127.0.0.1 for local-only access or implement strong authentication.',
+  },
+
+  // Missing rate limiting
+  {
+    id: 'mcp-no-rate-limit',
+    severity: 'warning',
+    description: 'MCP server may lack rate limiting',
+    pattern: /(?:serve_sse|serve_http|HTTPServerTransport)\s*\([^)]*\)(?![\s\S]{0,300}(?:rate[_-]?limit|throttle|RateLimiter|slowdown))/gi,
+    recommendation: 'MCP servers should implement rate limiting to prevent abuse and DoS attacks.',
+  },
+
+  // Lookalike tool names (typosquatting detection)
+  {
+    id: 'mcp-tool-typosquat-risk',
+    severity: 'warning',
+    description: 'Tool name similar to common tool (potential typosquat)',
+    pattern: /"(?:name|tool)"\s*:\s*"(?:filse[_-]?system|filesytem|filessystem|read[_-]?flie|write[_-]?flie|execute[_-]?comand|exec[_-]?cmd|web[_-]?serach|fetch[_-]?ulr|databse|memroy)"/gi,
+    recommendation: 'Tool name appears to be a typosquat of a legitimate tool. Verify tool authenticity.',
+  },
+
   // LangChain agent
   {
     id: 'langchain-agent',

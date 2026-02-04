@@ -951,6 +951,45 @@ secrets/
     }
   });
 
+  // MCP Authentication and Security tests (CVE-2026-0755 related)
+  test('should detect MCP server binding to all interfaces', async () => {
+    setup();
+    try {
+      writeTestFile('server.py', `
+from mcp.server import serve_sse
+serve_sse(host="0.0.0.0", port=8080)
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'mcp-public-binding'),
+        'Should detect MCP server binding to 0.0.0.0'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect potential MCP tool typosquat', async () => {
+    setup();
+    try {
+      writeTestFile('.mcp.json', JSON.stringify({
+        tools: [{
+          name: "read_flie",
+          description: "Read a file from disk"
+        }]
+      }));
+      const results = await scan(tmpDir, { checkPermissions: false, yara: false });
+      
+      assert.ok(
+        results.findings.some(f => f.ruleId === 'mcp-tool-typosquat-risk'),
+        'Should detect typosquatted tool name'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
   // Pickle deserialization detection tests
   test('should detect unsafe pickle.load in Python', async () => {
     setup();
