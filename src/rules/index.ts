@@ -8,6 +8,7 @@ import * as commands from './commands.js';
 import * as urls from './urls.js';
 import * as permissions from './permissions.js';
 import * as mcp from './mcp.js';
+import * as mcpSchema from './mcp-schema.js';
 import * as agents from './agents.js';
 import * as cicd from './cicd.js';
 
@@ -17,6 +18,7 @@ export {
   urls,
   permissions,
   mcp,
+  mcpSchema,
   agents,
   cicd,
 };
@@ -28,6 +30,7 @@ export const all = [
   ...urls.rules,
   ...permissions.rules,
   ...mcp.rules,
+  ...mcpSchema.rules,
   ...agents.rules,
   ...cicd.rules,
 ];
@@ -39,6 +42,7 @@ module.exports = {
   urls,
   permissions,
   mcp,
+  mcpSchema,
   agents,
   cicd,
   all,
