@@ -11,6 +11,7 @@ import * as mcp from './mcp.js';
 import * as mcpSchema from './mcp-schema.js';
 import * as agents from './agents.js';
 import * as cicd from './cicd.js';
+import * as mcpShadowing from './mcp-shadowing.js';
 
 export {
   credentials,
@@ -19,6 +20,7 @@ export {
   permissions,
   mcp,
   mcpSchema,
+  mcpShadowing,
   agents,
   cicd,
 };
@@ -31,6 +33,7 @@ export const all = [
   ...permissions.rules,
   ...mcp.rules,
   ...mcpSchema.rules,
+  ...mcpShadowing.rules,
   ...agents.rules,
   ...cicd.rules,
 ];
@@ -43,6 +46,7 @@ module.exports = {
   permissions,
   mcp,
   mcpSchema,
+  mcpShadowing,
   agents,
   cicd,
   all,
