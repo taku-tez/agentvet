@@ -49,7 +49,7 @@ Manifest Commands:
   agentvet manifest example          Show example manifest
 
 Options:
-  --format <type>    Output format: text (default), json, html, markdown, sarif
+  --format <type>    Output format: text (default), json, html, markdown, sarif, nemo
   --output <file>    Write output to file
   --quiet            Show summary only
   --fix              Auto-fix permission issues
@@ -457,6 +457,8 @@ function formatOutput(results, options, pathLabel) {
       return printMarkdown(results, pathLabel);
     case 'sarif':
       return printSARIF(results);
+    case 'nemo':
+      return printNemo(results);
     default:
       if (options.quiet) {
         return printQuiet(results);
@@ -520,6 +522,36 @@ function printSARIF(results) {
   sarif.runs[0].tool.driver.rules = Array.from(ruleMap.values());
   
   return JSON.stringify(sarif, null, 2);
+}
+
+// NeMo Guardrails compatible report format
+function printNemo(results) {
+  const findings = results.findings || [];
+  const failed = findings.length;
+  const total = failed + (results.scannedFiles || 0);
+  const passed = total - failed;
+
+  const nemoReport = {
+    config_id: 'agentvet',
+    scan_results: {
+      total: total,
+      passed: passed,
+      failed: failed,
+      details: findings.map(f => ({
+        rule_id: f.ruleId || f.rule || f.id,
+        severity: f.severity,
+        status: 'failed',
+        description: f.description || f.title || f.name,
+        file: f.file,
+        line: f.line || 0,
+        recommendation: f.recommendation || null,
+        category: f.category || null,
+        evidence: f.snippet || f.match || f.evidence || null,
+      })),
+    },
+  };
+
+  return JSON.stringify(nemoReport, null, 2);
 }
 
 // Watch mode implementation

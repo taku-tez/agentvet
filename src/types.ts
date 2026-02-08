@@ -47,7 +47,7 @@ export interface ScanOptions {
   /** Custom rules to include */
   customRules?: Rule[];
   /** Output format */
-  format?: 'text' | 'json' | 'sarif';
+  format?: 'text' | 'json' | 'sarif' | 'nemo';
   /** Enable YARA scanning */
   yara?: boolean;
   /** Enable dependency scanning */

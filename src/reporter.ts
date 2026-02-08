@@ -537,5 +537,37 @@ export function printMarkdown(results: any, targetPath: string): string {
   return lines.join('\n');
 }
 
+/**
+ * Print NeMo Guardrails compatible report
+ */
+export function printNemo(results: any): string {
+  const findings = results.findings || [];
+  const failed = findings.length;
+  const total = failed + (results.scannedFiles || 0);
+  const passed = total - failed;
+
+  const nemoReport = {
+    config_id: 'agentvet',
+    scan_results: {
+      total,
+      passed,
+      failed,
+      details: findings.map((f: Finding) => ({
+        rule_id: f.ruleId || f.rule || f.id,
+        severity: f.severity,
+        status: 'failed',
+        description: f.description || f.title || f.name,
+        file: f.file,
+        line: f.line || 0,
+        recommendation: f.recommendation || null,
+        category: f.category || null,
+        evidence: f.snippet || f.match || f.evidence || null,
+      })),
+    },
+  };
+
+  return JSON.stringify(nemoReport, null, 2);
+}
+
 // CommonJS compatibility
-module.exports = { printReport, printJSON, printQuiet, printHTML, printMarkdown };
+module.exports = { printReport, printJSON, printQuiet, printHTML, printMarkdown, printNemo };

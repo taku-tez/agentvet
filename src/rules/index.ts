@@ -13,6 +13,7 @@ import * as agents from './agents.js';
 import * as cicd from './cicd.js';
 import * as mcpShadowing from './mcp-shadowing.js';
 import * as pii from './pii.js';
+import * as guardrails from './guardrails.js';
 
 export {
   credentials,
@@ -25,6 +26,7 @@ export {
   agents,
   cicd,
   pii,
+  guardrails,
 };
 
 // Combined rules array
@@ -39,6 +41,7 @@ export const all = [
   ...agents.rules,
   ...cicd.rules,
   ...pii.rules,
+  ...guardrails.rules,
 ];
 
 // CommonJS compatibility
@@ -53,5 +56,6 @@ module.exports = {
   agents,
   cicd,
   pii,
+  guardrails,
   all,
 };
