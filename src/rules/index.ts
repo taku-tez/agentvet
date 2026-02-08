@@ -14,6 +14,9 @@ import * as cicd from './cicd.js';
 import * as mcpShadowing from './mcp-shadowing.js';
 import * as pii from './pii.js';
 import * as guardrails from './guardrails.js';
+import * as jailbreak from './jailbreak.js';
+import * as hallucination from './hallucination.js';
+import * as exfiltration from './exfiltration.js';
 
 export {
   credentials,
@@ -27,6 +30,9 @@ export {
   cicd,
   pii,
   guardrails,
+  jailbreak,
+  hallucination,
+  exfiltration,
 };
 
 // Combined rules array
@@ -42,6 +48,9 @@ export const all = [
   ...cicd.rules,
   ...pii.rules,
   ...guardrails.rules,
+  ...jailbreak.rules,
+  ...hallucination.rules,
+  ...exfiltration.rules,
 ];
 
 // CommonJS compatibility
@@ -57,5 +66,8 @@ module.exports = {
   cicd,
   pii,
   guardrails,
+  jailbreak,
+  hallucination,
+  exfiltration,
   all,
 };
