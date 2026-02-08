@@ -1,0 +1,71 @@
+# AgentVet MCP Proxy Policy Example
+# Use with: agentvet proxy --config policy.yaml --port 3000 --upstream http://localhost:8080
+
+version: "1.0"
+name: "default-security"
+description: "Default security policy for MCP proxy"
+
+defaults:
+  action: allow
+  logLevel: info
+
+# Injection detection settings
+injection:
+  enabled: true
+  action: block  # block | warn | log
+
+# Policy rules (evaluated in order, first match wins)
+rules:
+  # Block dangerous shell commands
+  - id: block-shell-exec
+    description: "Block shell/bash execution tools"
+    match:
+      tool:
+        - bash
+        - shell
+        - exec
+        - run_command
+        - execute_command
+    action: block
+    reason: "Shell execution is not allowed"
+
+  # Block file deletion
+  - id: block-file-delete
+    description: "Block file deletion operations"
+    match:
+      toolPattern: "*delete*"
+    action: block
+    reason: "File deletion is not allowed"
+
+  # Warn on file write operations
+  - id: warn-file-write
+    description: "Warn on file write operations"
+    match:
+      tool:
+        - write_file
+        - create_file
+        - edit_file
+    action: warn
+    reason: "File write operation detected"
+
+  # Block access to sensitive paths
+  - id: block-sensitive-paths
+    description: "Block access to sensitive directories"
+    match:
+      toolPattern: "*file*"
+      args:
+        path:
+          matches: "(\\.env|/etc/passwd|/etc/shadow|\\.ssh/|credentials|secrets)"
+    action: block
+    reason: "Access to sensitive path blocked"
+
+  # Warn on network requests
+  - id: warn-network
+    description: "Warn on network request tools"
+    match:
+      tool:
+        - fetch
+        - http_request
+        - curl
+    action: warn
+    reason: "Network request detected"

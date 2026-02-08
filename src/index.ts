@@ -41,6 +41,9 @@ export function getRules(): Rule[] {
 // Export Scanner class
 export { Scanner };
 
+// Export Proxy module
+export { MCPProxyServer, PolicyEngine, detectInjection } from './proxy/index.js';
+
 // Default export for CommonJS compatibility
 module.exports = {
   scan,

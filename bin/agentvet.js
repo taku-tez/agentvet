@@ -28,6 +28,7 @@ Usage:
   agentvet install <slug>    Install skill from ClawdHub with security vetting
   agentvet check <path>      Check a local skill directory for security issues
   agentvet manifest <cmd>    Manage Permission Manifests and Trust Chains
+  agentvet proxy             Start MCP proxy for runtime protection
   agentvet init              Generate sample config and rules files
   agentvet --help            Show this help message
   agentvet --version         Show version
@@ -66,6 +67,13 @@ Options:
   --llm-model        LLM model to use
   --parallel         Scan multiple paths in parallel
   --config <file>    Load options from config file
+
+Proxy Options:
+  --config <file>    Policy file (YAML/JSON)
+  --port <port>      Proxy listen port (default: 3000)
+  --upstream <url>   Upstream MCP server URL (default: http://localhost:8080)
+  --dry-run          Log only, don't actually block
+  --verbose          Verbose logging
 
 Watch Mode Options:
   --debounce <ms>    Debounce delay for file changes (default: 500)
@@ -210,6 +218,11 @@ function parseArgs(args) {
     workdir: null,
     installVersion: null,
     skipVet: false,
+    // Proxy options
+    port: 3000,
+    upstream: 'http://localhost:8080',
+    dryRun: false,
+    verbose: false,
   };
 
   let i = 0;
@@ -222,6 +235,7 @@ function parseArgs(args) {
       case 'init':
       case 'install':
       case 'check':
+      case 'proxy':
         options.command = arg;
         while (args[i + 1] && !args[i + 1].startsWith('-')) {
           options.paths.push(args[++i]);
@@ -320,6 +334,18 @@ function parseArgs(args) {
         break;
       case '--install-version':
         options.installVersion = args[++i];
+        break;
+      case '--port':
+        options.port = parseInt(args[++i]) || 3000;
+        break;
+      case '--upstream':
+        options.upstream = args[++i];
+        break;
+      case '--dry-run':
+        options.dryRun = true;
+        break;
+      case '--verbose':
+        options.verbose = true;
         break;
       default:
         if (!options.command && !arg.startsWith('-')) {
@@ -879,6 +905,51 @@ async function main() {
       format: options.format,
     });
     process.exit(0);
+  }
+
+  // Proxy command
+  if (options.command === 'proxy') {
+    const { MCPProxyServer } = require('../dist/proxy/index.js');
+    const yamlMod = require('yaml');
+    
+    // Load policy
+    let policy;
+    const policyPath = options.config || options.paths[0];
+    if (policyPath) {
+      const policyContent = fs.readFileSync(policyPath, 'utf-8');
+      policy = policyPath.endsWith('.json') ? JSON.parse(policyContent) : yamlMod.parse(policyContent);
+    } else {
+      // Default restrictive policy
+      policy = {
+        version: '1.0',
+        name: 'default',
+        rules: [
+          { id: 'block-shell', match: { tool: ['bash', 'shell', 'exec', 'run_command'] }, action: 'block', reason: 'Shell execution blocked' },
+          { id: 'block-delete', match: { toolPattern: '*delete*' }, action: 'block', reason: 'Deletion blocked' },
+        ],
+        defaults: { action: 'allow' },
+        injection: { enabled: true, action: 'warn' },
+      };
+      console.log('No policy file specified, using default policy. Use --config to specify one.');
+    }
+
+    const proxy = new MCPProxyServer({
+      port: options.port,
+      upstream: options.upstream,
+      policy,
+      verbose: options.verbose,
+      dryRun: options.dryRun,
+    });
+
+    await proxy.start();
+    
+    process.on('SIGINT', async () => {
+      console.log('\n🛑 Shutting down proxy...');
+      await proxy.stop();
+      process.exit(0);
+    });
+    
+    return; // Keep running
   }
 
   // Prepare scan options
