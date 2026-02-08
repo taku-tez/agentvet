@@ -187,6 +187,45 @@ const mcpPromptInjectionPatterns = [
   },
 ];
 
+// Known vulnerable MCP server detection
+const mcpVulnerableServerPatterns: Rule[] = [
+  {
+    id: 'mcp-vulnerable-git-server',
+    severity: 'critical',
+    description: 'MCP Git server pre-Dec 2025 is vulnerable to prompt injection via malicious README/issues (CVE-2026-25253 class)',
+    pattern: /"(?:command|args)"\s*:\s*"[^"]*mcp-server-git(?:@[01]\.|@0\.)/gi,
+    recommendation: 'Update mcp-server-git to latest version (post-Dec 2025 fix). Malicious repo content can trigger file read/delete/RCE.',
+  },
+  {
+    id: 'mcp-git-unrestricted-repo',
+    severity: 'warning',
+    description: 'MCP Git server configured without repository path restriction',
+    pattern: /"(?:npx|node)"\s*,\s*"[^"]*mcp-server-git"(?!\s*,\s*"--allowed)/gi,
+    recommendation: 'Use --allowed-repos or --repo-path to restrict which repositories the MCP Git server can access.',
+  },
+  {
+    id: 'mcp-filesystem-no-allowlist',
+    severity: 'warning',
+    description: 'MCP Filesystem server without directory allowlist — grants broad file access',
+    pattern: /"(?:npx|node)"\s*,\s*"[^"]*mcp-server-filesystem"(?!\s*,\s*"\/)/gi,
+    recommendation: 'Always specify allowed directories as arguments to mcp-server-filesystem to limit access scope.',
+  },
+  {
+    id: 'mcp-server-everything',
+    severity: 'critical',
+    description: 'MCP "Everything" server detected — exposes all tools without restriction',
+    pattern: /mcp-server-everything|"everything"\s*:\s*\{/gi,
+    recommendation: 'The "everything" server is for testing only. Never use in production — it grants unrestricted tool access.',
+  },
+  {
+    id: 'mcp-tool-readme-injection',
+    severity: 'warning',
+    description: 'Tool description references README or external content that could be attacker-controlled',
+    pattern: /(?:read|parse|load|fetch)\s+(?:the\s+)?(?:README|CONTRIBUTING|CHANGELOG|\.md\s+file)/gi,
+    recommendation: 'Content from repository files (README, etc.) can contain prompt injection. Sanitize before processing.',
+  },
+];
+
 // Combine all MCP rules
 export const rules: Rule[] = [
   ...mcpCredentialPatterns,
@@ -194,6 +233,7 @@ export const rules: Rule[] = [
   ...mcpUrlPatterns,
   ...mcpPermissionPatterns,
   ...mcpPromptInjectionPatterns,
+  ...mcpVulnerableServerPatterns,
 ];
 
 
