@@ -1,0 +1,44 @@
+# AgentVet Prompt Firewall - Default Configuration
+# Place this file as firewall.yaml and customize as needed
+
+version: "1.0"
+name: "default"
+description: "Default prompt firewall ruleset - blocks critical injection patterns"
+
+# Inbound filter: scan user/client messages for injection attempts
+inbound:
+  enabled: true
+  action: block  # block | warn | log
+
+# Outbound filter: scan tool responses for hidden prompts
+outbound:
+  enabled: true
+  action: block
+
+# Context protection: prevent system prompt extraction
+context_protection:
+  enabled: true
+  action: block
+  # canary_token: "AGENTVET_CANARY_abc123"  # Uncomment and embed in system prompt
+
+# Score thresholds
+thresholds:
+  block: 30   # Score >= 30 triggers block (if action=block)
+  warn: 15    # Score >= 15 triggers warning
+
+# Audit logging
+audit:
+  enabled: true
+  file: "firewall-audit.jsonl"
+  format: json
+  include_content: false
+
+# Custom patterns (in addition to 25+ built-in patterns)
+# custom_patterns:
+#   - id: "CUSTOM001"
+#     description: "Block requests mentioning internal API"
+#     pattern: "internal-api\\.example\\.com"
+#     category: "custom"
+#     severity: "high"
+#     direction: "both"
+#     action: "block"

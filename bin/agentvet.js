@@ -30,7 +30,6 @@ Usage:
   agentvet manifest <cmd>    Manage Permission Manifests and Trust Chains
   agentvet a2a               Scan A2A (Agent-to-Agent) protocol endpoints
   agentvet proxy             Start MCP proxy for runtime protection
-  agentvet firewall          Start Prompt Firewall server
   agentvet firewall          Start Prompt Firewall (injection filtering proxy)
   agentvet init              Generate sample config and rules files
   agentvet --help            Show this help message
@@ -949,44 +948,6 @@ async function main() {
       format: options.format,
     });
     process.exit(0);
-  }
-
-  // Firewall command
-  if (options.command === 'firewall') {
-    const { FirewallServer } = require('../dist/firewall/index.js');
-    const yamlMod = require('yaml');
-
-    let config;
-    const configPath = options.config || options.paths[0];
-    if (configPath) {
-      const configContent = fs.readFileSync(configPath, 'utf-8');
-      config = configPath.endsWith('.json') ? JSON.parse(configContent) : yamlMod.parse(configContent);
-    } else {
-      // Default config
-      const defaultYaml = fs.readFileSync(path.join(__dirname, '..', 'dist', 'firewall', 'default-firewall.yaml'), 'utf-8');
-      config = yamlMod.parse(defaultYaml);
-      console.log('No config file specified, using default firewall config. Use --config to specify one.');
-    }
-
-    const firewall = new FirewallServer({
-      port: options.port,
-      upstream: options.upstream,
-      config,
-      verbose: options.verbose,
-      logFile: config.audit?.file,
-    });
-
-    await firewall.start();
-
-    process.on('SIGINT', async () => {
-      console.log('\n🛑 Shutting down firewall...');
-      const stats = firewall.getEngine().getStats();
-      console.log(`📊 Stats: ${stats.inboundBlocked} inbound blocked, ${stats.outboundBlocked} outbound blocked, ${stats.contextBlocked} context blocked`);
-      await firewall.stop();
-      process.exit(0);
-    });
-
-    return;
   }
 
   // Firewall command
