@@ -1,6 +1,6 @@
 {
   "name": "@agentvet/cli",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Security scanner for AI agent skills, configs, and MCP tools. Vet before you trust.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
     "build": "tsc",
     "build:check": "tsc --noEmit",
     "dev": "node bin/agentvet.js",
-    "test": "npm run build && node --test test/*.test.js test/rules/*.test.js",
+    "test": "npm run build && node --test test/*.test.js test/rules/*.test.js test/firewall/*.test.js",
     "lint": "eslint src bin",
     "lint:fix": "eslint src bin --fix",
     "scan": "node bin/agentvet.js scan .",
