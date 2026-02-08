@@ -12,6 +12,7 @@ import * as mcpSchema from './mcp-schema.js';
 import * as agents from './agents.js';
 import * as cicd from './cicd.js';
 import * as mcpShadowing from './mcp-shadowing.js';
+import * as pii from './pii.js';
 
 export {
   credentials,
@@ -23,6 +24,7 @@ export {
   mcpShadowing,
   agents,
   cicd,
+  pii,
 };
 
 // Combined rules array
@@ -36,6 +38,7 @@ export const all = [
   ...mcpShadowing.rules,
   ...agents.rules,
   ...cicd.rules,
+  ...pii.rules,
 ];
 
 // CommonJS compatibility
@@ -49,5 +52,6 @@ module.exports = {
   mcpShadowing,
   agents,
   cicd,
+  pii,
   all,
 };

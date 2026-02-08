@@ -56,6 +56,7 @@ const mcp = require('./rules/mcp.js');
 const agents = require('./rules/agents.js');
 const cicd = require('./rules/cicd.js');
 const pickle = require('./rules/pickle.js');
+const pii = require('./rules/pii.js');
 const mcpDiscovery = require('./rules/mcp-discovery.js');
 
 // Optional modules
@@ -234,6 +235,7 @@ export class Scanner {
       ...cicd.rules,
       ...pickle.rules,
       ...mcpDiscovery.rules,
+      ...pii.rules,
     ];
     
     this.ignorePatterns = [];
