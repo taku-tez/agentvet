@@ -44,6 +44,12 @@ export { Scanner };
 // Export Proxy module
 export { MCPProxyServer, PolicyEngine, detectInjection } from './proxy/index.js';
 
+// Export A2A module
+export { A2AScanner } from './a2a/index.js';
+
+// Export Firewall module
+export { FirewallServer, FirewallEngine, FIREWALL_PATTERNS } from './firewall/index.js';
+
 // Default export for CommonJS compatibility
 module.exports = {
   scan,

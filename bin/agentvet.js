@@ -28,7 +28,10 @@ Usage:
   agentvet install <slug>    Install skill from ClawdHub with security vetting
   agentvet check <path>      Check a local skill directory for security issues
   agentvet manifest <cmd>    Manage Permission Manifests and Trust Chains
+  agentvet a2a               Scan A2A (Agent-to-Agent) protocol endpoints
   agentvet proxy             Start MCP proxy for runtime protection
+  agentvet firewall          Start Prompt Firewall server
+  agentvet firewall          Start Prompt Firewall (injection filtering proxy)
   agentvet init              Generate sample config and rules files
   agentvet --help            Show this help message
   agentvet --version         Show version
@@ -97,6 +100,10 @@ Examples:
 
   # Combined
   agentvet scan . --llm --format html --output report.html
+
+  # A2A protocol scan
+  agentvet a2a --url https://agent.example.com
+  agentvet a2a --config agent-card.json
 
 Exit codes:
   0 - No critical issues found
@@ -236,6 +243,8 @@ function parseArgs(args) {
       case 'install':
       case 'check':
       case 'proxy':
+      case 'firewall':
+      case 'a2a':
         options.command = arg;
         while (args[i + 1] && !args[i + 1].startsWith('-')) {
           options.paths.push(args[++i]);
@@ -340,6 +349,9 @@ function parseArgs(args) {
         break;
       case '--upstream':
         options.upstream = args[++i];
+        break;
+      case '--url':
+        options.a2aUrl = args[++i];
         break;
       case '--dry-run':
         options.dryRun = true;
@@ -937,6 +949,135 @@ async function main() {
       format: options.format,
     });
     process.exit(0);
+  }
+
+  // Firewall command
+  if (options.command === 'firewall') {
+    const { FirewallServer } = require('../dist/firewall/index.js');
+    const yamlMod = require('yaml');
+
+    let config;
+    const configPath = options.config || options.paths[0];
+    if (configPath) {
+      const configContent = fs.readFileSync(configPath, 'utf-8');
+      config = configPath.endsWith('.json') ? JSON.parse(configContent) : yamlMod.parse(configContent);
+    } else {
+      // Default config
+      const defaultYaml = fs.readFileSync(path.join(__dirname, '..', 'dist', 'firewall', 'default-firewall.yaml'), 'utf-8');
+      config = yamlMod.parse(defaultYaml);
+      console.log('No config file specified, using default firewall config. Use --config to specify one.');
+    }
+
+    const firewall = new FirewallServer({
+      port: options.port,
+      upstream: options.upstream,
+      config,
+      verbose: options.verbose,
+      logFile: config.audit?.file,
+    });
+
+    await firewall.start();
+
+    process.on('SIGINT', async () => {
+      console.log('\n🛑 Shutting down firewall...');
+      const stats = firewall.getEngine().getStats();
+      console.log(`📊 Stats: ${stats.inboundBlocked} inbound blocked, ${stats.outboundBlocked} outbound blocked, ${stats.contextBlocked} context blocked`);
+      await firewall.stop();
+      process.exit(0);
+    });
+
+    return;
+  }
+
+  // Firewall command
+  if (options.command === 'firewall') {
+    const { FirewallServer, DEFAULT_FIREWALL_CONFIG, DEFAULT_FIREWALL_YAML } = require('../dist/firewall/index.js');
+    const yamlMod = require('yaml');
+
+    // --init: generate default config
+    if (options.paths[0] === 'init' || options.init) {
+      const outPath = options.output || 'firewall.yaml';
+      fs.writeFileSync(outPath, DEFAULT_FIREWALL_YAML);
+      console.log(`✅ Default firewall config written to ${outPath}`);
+      process.exit(0);
+    }
+
+    // Load config
+    let config;
+    const configPath = options.config || options.paths[0];
+    if (configPath && fs.existsSync(configPath)) {
+      const raw = fs.readFileSync(configPath, 'utf-8');
+      config = configPath.endsWith('.json') ? JSON.parse(raw) : yamlMod.parse(raw);
+    } else {
+      config = DEFAULT_FIREWALL_CONFIG;
+      console.log('ℹ️  No config file specified, using defaults. Run `agentvet firewall init` to generate one.');
+    }
+
+    const port = options.port || 3001;
+    const server = new FirewallServer({
+      port,
+      config,
+      verbose: options.verbose,
+      upstream: options.upstream,
+    });
+
+    await server.start();
+
+    process.on('SIGINT', async () => {
+      console.log('\n🛑 Shutting down firewall...');
+      await server.stop();
+      process.exit(0);
+    });
+
+    return; // Keep running
+  }
+
+  // A2A protocol scan command
+  if (options.command === 'a2a') {
+    let A2AScanner, printA2AReport, printA2AJSON;
+    try {
+      ({ A2AScanner } = require('../dist/a2a/index.js'));
+      ({ printA2AReport, printA2AJSON } = require('../dist/a2a/reporter.js'));
+    } catch {
+      ({ A2AScanner } = require('../src/a2a/index.js'));
+      ({ printA2AReport, printA2AJSON } = require('../src/a2a/reporter.js'));
+    }
+
+    const a2aUrl = options.a2aUrl || options.paths[0];
+    const a2aConfig = options.config || options.paths[1];
+
+    if (!a2aUrl && !a2aConfig) {
+      console.error('❌ Usage: agentvet a2a --url <agent-url> or agentvet a2a --config <agent-card.json>');
+      process.exit(2);
+    }
+
+    const scanner = new A2AScanner({
+      url: a2aUrl,
+      config: a2aConfig,
+      verbose: options.verbose,
+      timeout: 10000,
+    });
+
+    try {
+      const result = await scanner.scan();
+
+      if (options.output) {
+        const output = options.format === 'json' ? JSON.stringify(result, null, 2) : '';
+        fs.writeFileSync(options.output, output);
+        console.log(`Report written to ${options.output}`);
+      }
+
+      if (options.format === 'json') {
+        printA2AJSON(result);
+      } else {
+        printA2AReport(result);
+      }
+
+      process.exit(result.summary.critical > 0 ? 1 : 0);
+    } catch (err) {
+      console.error(`❌ A2A scan error: ${err.message}`);
+      process.exit(2);
+    }
   }
 
   // Proxy command
