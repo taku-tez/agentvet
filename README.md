@@ -3,6 +3,7 @@
 > Security scanner for AI agent skills, configs, and MCP tools. **Vet before you trust.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@agentvet%2Fcli)](https://www.npmjs.com/package/@agentvet/cli)
 
 ---
 
@@ -32,6 +33,12 @@ A single malicious skill can exfiltrate credentials, install backdoors, or hijac
 - 🧠 **LLM Intent Analysis** — AI-powered detection of malicious instructions in agent configs
 
 ---
+
+## Quick Start
+
+```bash
+npx @agentvet/cli --help
+```
 
 ## Installation
 
@@ -295,6 +302,10 @@ module.exports = {
 ```
 
 ---
+
+## Part of xxVet Series
+
+xxVet is a collection of 15 focused security CLI tools. See [full catalog](https://www.notion.so/xxVet-CLI-304b1e6bcbc2817abe62d4aecee9914a).
 
 ## License
 
