@@ -17,6 +17,7 @@ import * as guardrails from './guardrails.js';
 import * as jailbreak from './jailbreak.js';
 import * as hallucination from './hallucination.js';
 import * as exfiltration from './exfiltration.js';
+import * as indirectInjection from './indirect-injection.js';
 
 export {
   credentials,
@@ -33,6 +34,7 @@ export {
   jailbreak,
   hallucination,
   exfiltration,
+  indirectInjection,
 };
 
 // Combined rules array
@@ -51,6 +53,7 @@ export const all = [
   ...jailbreak.rules,
   ...hallucination.rules,
   ...exfiltration.rules,
+  ...indirectInjection.rules,
 ];
 
 // CommonJS compatibility
@@ -69,5 +72,6 @@ module.exports = {
   jailbreak,
   hallucination,
   exfiltration,
+  indirectInjection,
   all,
 };
