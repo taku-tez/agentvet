@@ -18,6 +18,7 @@ import * as jailbreak from './jailbreak.js';
 import * as hallucination from './hallucination.js';
 import * as exfiltration from './exfiltration.js';
 import * as indirectInjection from './indirect-injection.js';
+import * as skillManifest from './skill-manifest.js';
 
 export {
   credentials,
@@ -35,6 +36,7 @@ export {
   hallucination,
   exfiltration,
   indirectInjection,
+  skillManifest,
 };
 
 // Combined rules array
@@ -54,6 +56,7 @@ export const all = [
   ...hallucination.rules,
   ...exfiltration.rules,
   ...indirectInjection.rules,
+  ...skillManifest.rules,
 ];
 
 // CommonJS compatibility
@@ -73,5 +76,6 @@ module.exports = {
   hallucination,
   exfiltration,
   indirectInjection,
+  skillManifest,
   all,
 };
