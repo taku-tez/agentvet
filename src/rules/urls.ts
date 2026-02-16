@@ -445,6 +445,74 @@ export const rules: Rule[] = [
   },
 
   // ============================================
+  // Additional Exfiltration & Webhook Services
+  // (Added per Issue #12: Enhance suspicious URL detection)
+  // ============================================
+  {
+    id: 'url-oastify',
+    severity: 'critical',
+    description: 'Burp Suite OOB (oastify.com) URL detected',
+    pattern: /https?:\/\/[a-z0-9]+\.oastify\.com/gi,
+    recommendation: 'Remove oastify.com URLs. This is Burp Suite\'s out-of-band testing domain.',
+  },
+  {
+    id: 'url-webhook-cool',
+    severity: 'critical',
+    description: 'Webhook.cool URL detected',
+    pattern: /https?:\/\/(?:[a-z0-9-]+\.)?webhook\.cool/gi,
+    recommendation: 'Remove webhook.cool URLs. Webhook capture service used for exfiltration.',
+  },
+  {
+    id: 'url-pipedream-eo',
+    severity: 'warning',
+    description: 'Pipedream (eo API) URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.(?:m\.pipedream\.net|eo\.pipedream\.net|pipedream\.com\/sources)/gi,
+    recommendation: 'Review Pipedream endpoint usage for potential data exfiltration.',
+  },
+  {
+    id: 'url-putsreq',
+    severity: 'warning',
+    description: 'PutsReq URL detected',
+    pattern: /https?:\/\/putsreq\.com\/[a-zA-Z0-9]+/gi,
+    recommendation: 'Review PutsReq usage. HTTP request capture service.',
+  },
+  {
+    id: 'url-free-beeceptor',
+    severity: 'warning',
+    description: 'Beeceptor URL detected (any subdomain)',
+    pattern: /https?:\/\/[a-z0-9-]+\.beeceptor\.com/gi,
+    recommendation: 'Review Beeceptor usage. Mock API endpoints can capture exfiltrated data.',
+  },
+  {
+    id: 'url-tailscale-funnel',
+    severity: 'warning',
+    description: 'Tailscale Funnel URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.ts\.net/gi,
+    recommendation: 'Review Tailscale Funnel usage. Can expose local services externally.',
+  },
+  {
+    id: 'url-loca-tunnel',
+    severity: 'warning',
+    description: 'Localhost.run tunnel URL detected',
+    pattern: /https?:\/\/[a-z0-9]+\.lhr\.life/gi,
+    recommendation: 'Review localhost.run tunnel usage. Exposes local services externally.',
+  },
+  {
+    id: 'url-expose-dev',
+    severity: 'warning',
+    description: 'Expose.dev tunnel URL detected',
+    pattern: /https?:\/\/[a-z0-9-]+\.sharedwithexpose\.com/gi,
+    recommendation: 'Review Expose tunnel usage.',
+  },
+  {
+    id: 'url-bin-sh',
+    severity: 'critical',
+    description: 'httpbin or similar HTTP echo service detected',
+    pattern: /https?:\/\/(?:www\.)?httpbin\.org\/(?:post|get|anything)/gi,
+    recommendation: 'Review httpbin usage. Echo services can capture and reflect exfiltrated data.',
+  },
+
+  // ============================================
   // Crypto Mining / Malicious
   // ============================================
   {
