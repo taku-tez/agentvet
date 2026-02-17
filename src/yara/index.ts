@@ -110,7 +110,7 @@ class YaraScanner {
       const stringsMatch = ruleBody.match(/strings:\s*([\s\S]*?)(?=condition:|$)/);
       if (stringsMatch) {
         // Match patterns with their variable names
-        const stringPatterns = stringsMatch[1].matchAll(/(\$\w+)\s*=\s*(?:"([^"]+)"(?:\s+nocase)?|\/([^\/]+)\/[i]?)/g);
+        const stringPatterns = stringsMatch[1].matchAll(/(\$\w+)\s*=\s*(?:"([^"]+)"(?:\s+nocase)?|\/(((?:[^\/\\]|\\.))+)\/[i]?)/g);
         for (const sp of stringPatterns) {
           const varName = sp[1]; // e.g., $env1, $send2
           const strValue = sp[2];
@@ -125,7 +125,7 @@ class YaraScanner {
             varName,
             prefix,
             type: strValue ? 'string' : 'regex',
-            value: strValue || (regexValue ? new RegExp(regexValue, isNocase ? 'gi' : 'g') : null),
+            value: strValue || (regexValue ? new RegExp(regexValue.replace(/\\\//g, '/'), isNocase ? 'gi' : 'g') : null),
             nocase: isNocase,
           };
           

