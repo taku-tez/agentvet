@@ -19,6 +19,7 @@ import * as hallucination from './hallucination.js';
 import * as exfiltration from './exfiltration.js';
 import * as indirectInjection from './indirect-injection.js';
 import * as skillManifest from './skill-manifest.js';
+import * as jwt from './jwt.js';
 
 export {
   credentials,
@@ -37,6 +38,7 @@ export {
   exfiltration,
   indirectInjection,
   skillManifest,
+  jwt,
 };
 
 // Combined rules array
@@ -57,6 +59,7 @@ export const all = [
   ...exfiltration.rules,
   ...indirectInjection.rules,
   ...skillManifest.rules,
+  ...jwt.rules,
 ];
 
 // CommonJS compatibility
@@ -77,5 +80,6 @@ module.exports = {
   exfiltration,
   indirectInjection,
   skillManifest,
+  jwt,
   all,
 };
