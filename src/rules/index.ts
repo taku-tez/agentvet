@@ -20,6 +20,8 @@ import * as exfiltration from './exfiltration.js';
 import * as indirectInjection from './indirect-injection.js';
 import * as skillManifest from './skill-manifest.js';
 import * as jwt from './jwt.js';
+import * as container from './container.js';
+import * as ssrf from './ssrf.js';
 
 export {
   credentials,
@@ -39,6 +41,8 @@ export {
   indirectInjection,
   skillManifest,
   jwt,
+  container,
+  ssrf,
 };
 
 // Combined rules array
@@ -60,6 +64,8 @@ export const all = [
   ...indirectInjection.rules,
   ...skillManifest.rules,
   ...jwt.rules,
+  ...container.rules,
+  ...ssrf.rules,
 ];
 
 // CommonJS compatibility
@@ -81,5 +87,7 @@ module.exports = {
   indirectInjection,
   skillManifest,
   jwt,
+  container,
+  ssrf,
   all,
 };
