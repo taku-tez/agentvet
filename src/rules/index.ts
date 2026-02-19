@@ -22,6 +22,8 @@ import * as skillManifest from './skill-manifest.js';
 import * as jwt from './jwt.js';
 import * as container from './container.js';
 import * as ssrf from './ssrf.js';
+import * as deserialization from './deserialization.js';
+import * as obfuscation from './obfuscation.js';
 
 export {
   credentials,
@@ -43,6 +45,8 @@ export {
   jwt,
   container,
   ssrf,
+  deserialization,
+  obfuscation,
 };
 
 // Combined rules array
@@ -66,6 +70,8 @@ export const all = [
   ...jwt.rules,
   ...container.rules,
   ...ssrf.rules,
+  ...deserialization.rules,
+  ...obfuscation.rules,
 ];
 
 // CommonJS compatibility
@@ -89,5 +95,7 @@ module.exports = {
   jwt,
   container,
   ssrf,
+  deserialization,
+  obfuscation,
   all,
 };
