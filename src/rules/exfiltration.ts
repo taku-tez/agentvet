@@ -103,6 +103,80 @@ export const rules: Rule[] = [
     category: 'exfiltration',
     cwe: 'CWE-379',
   },
+
+  // ============================================
+  // Out-of-Band (OOB) Exfiltration Services
+  // Commonly used to capture data from compromised agents
+  // ============================================
+  {
+    id: 'exfil-oob-webhook-site',
+    severity: 'critical',
+    description: 'Data sent to webhook.site (known OOB data capture service)',
+    pattern: /https?:\/\/webhook\.site\/[a-f0-9-]{36}/gi,
+    recommendation: 'webhook.site is a public service used to capture arbitrary HTTP requests. Sending data here is almost certainly an exfiltration attempt.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-oob-requestbin',
+    severity: 'critical',
+    description: 'Data sent to RequestBin or similar HTTP inspection service',
+    pattern: /https?:\/\/(?:[a-z0-9]+\.)?(?:requestbin\.(?:com|net|io)|hookbin\.com|requestcatcher\.com|beeceptor\.com|mockbin\.org|httpbin\.org\/post|httpie\.io\/run)\//gi,
+    recommendation: 'RequestBin-type services capture arbitrary HTTP traffic. These are classic exfiltration endpoints. Reject any skill sending data to these services.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-oob-pipedream',
+    severity: 'critical',
+    description: 'Data sent to Pipedream or similar workflow automation endpoint (OOB exfiltration risk)',
+    pattern: /https?:\/\/(?:[a-z0-9]+\.m\.)?pipedream\.net\/[a-zA-Z0-9_-]+/gi,
+    recommendation: 'Pipedream endpoints can capture arbitrary HTTP requests. Sending data to these endpoints from an agent skill is a strong indicator of data exfiltration.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-oob-interactsh',
+    severity: 'critical',
+    description: 'Data sent to Interactsh/Burp Collaborator OOB testing endpoint',
+    pattern: /https?:\/\/(?:[a-z0-9]+\.)?(?:oastify\.com|interactsh\.com|burpcollaborator\.net|canarytokens\.(?:com|org))\//gi,
+    recommendation: 'Interactsh and Burp Collaborator endpoints are security testing tools for OOB exfiltration detection. Their presence in a skill is highly suspicious.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-oob-tunnel',
+    severity: 'high',
+    description: 'Public tunnel service used (potential covert channel for exfiltration)',
+    pattern: /https?:\/\/[a-z0-9-]+\.(?:ngrok\.(?:io|app)|serveo\.net|loca\.lt|localtunnel\.me|pagekite\.me|localhost\.run)\b/gi,
+    recommendation: 'Tunnel services (ngrok, serveo, etc.) expose internal services publicly. When used inside an agent skill, they can create covert exfiltration channels.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+
+  // ============================================
+  // Sensitive Dotfile / Credential File Access
+  // Based on real attack: weather skill exfiltrated ~/.clawdbot/.env
+  // ============================================
+  {
+    id: 'exfil-dotenv-read',
+    severity: 'critical',
+    description: 'Reading sensitive dotfile or credential file (e.g., ~/.clawdbot/.env, ~/.env)',
+    pattern: /(?:readFile(?:Sync)?\s*\([^)]*|cat\s+|open\s*\([^)]*)['"~]?(?:\/root|\/home\/[^/]+)?\/?\.(?:clawdbot|config\/openclaw|ssh\/(?:id_rsa|id_ed25519)|aws\/credentials|gnupg\/|netrc|npmrc|pypirc|docker\/config\.json|kube\/|gcloud\/application_default_credentials\.json)[^'")\s]*/gi,
+    recommendation: 'Accessing sensitive dotfiles (SSH keys, cloud credentials, .env files) is a critical red flag. This is how the credential-stealer weather skill operated. Block immediately.',
+    category: 'exfiltration',
+    cwe: 'CWE-522',
+  },
+  {
+    id: 'exfil-env-file-read',
+    severity: 'critical',
+    description: 'Agent skill reads .env file (potential API key theft)',
+    // Match file read ops where the quoted path ends with .env (with or without directory prefix)
+    pattern: /(?:readFile(?:Sync)?\s*\(\s*['"]|cat\s+['"]?|open\s*\(\s*['"])[^'")\n]{0,120}\.env['")\s]/gi,
+    recommendation: 'Reading .env files steals API keys and credentials. Unless this is a legitimate env loader, treat as malicious. Verify the skill\'s declared purpose.',
+    category: 'exfiltration',
+    cwe: 'CWE-522',
+  },
 ];
 
 // CommonJS compatibility
