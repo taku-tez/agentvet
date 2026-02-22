@@ -63,6 +63,9 @@ describe('Skill Manifest Rules', () => {
     test('should detect invisible Unicode characters', () => {
       testRule('skill-invisible-unicode', 'normal text \u200B\u200C\u200D\u2060 more text', true);
       testRule('skill-invisible-unicode', 'normal text without hidden chars', false);
+      // Even a single invisible char should be flagged
+      testRule('skill-invisible-unicode', 'click here\u200B', true);
+      testRule('skill-invisible-unicode', '\uFEFFThis is a BOM-prefixed file', true);
     });
 
     test('should detect permission escalation requests', () => {
@@ -88,6 +91,23 @@ describe('Skill Manifest Rules', () => {
       testRule('manifest-all-access', '"scope": "all"', true);
       testRule('manifest-all-access', '"access": "full"', true);
       testRule('manifest-all-access', '"scope": "read-only"', false);
+    });
+  });
+
+  describe('Code Obfuscation Detection', () => {
+    test('should detect eval with base64 decode (obfuscated payload)', () => {
+      testRule('skill-eval-obfuscation', 'eval(atob("aGVsbG8gd29ybGQ="))', true);
+      testRule('skill-eval-obfuscation', 'eval(Buffer.from("aGVsbG8=", "base64").toString())', true);
+      testRule('skill-eval-obfuscation', 'eval("console.log(1)")', false);
+      testRule('skill-eval-obfuscation', 'atob("aGVsbG8=")', false);
+    });
+
+    test('should detect dynamic require/import with variable path', () => {
+      testRule('skill-dynamic-require', 'require(modulePath)', true);
+      testRule('skill-dynamic-require', 'require(process.env.MODULE)', true);
+      testRule('skill-dynamic-require', 'import(dynamicUrl)', true);
+      testRule('skill-dynamic-require', 'require("fs")', false);
+      testRule('skill-dynamic-require', "require('path')", false);
     });
   });
 

@@ -58,7 +58,7 @@ export const rules: Rule[] = [
     id: 'skill-invisible-unicode',
     severity: 'critical',
     description: 'SKILL.md contains invisible Unicode characters (potential hidden instructions)',
-    pattern: /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF]{3,}/g,
+    pattern: /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF]+/g,
     recommendation: 'Remove invisible Unicode sequences from SKILL.md. These can hide malicious instructions.',
     category: 'skill-manifest',
   },
@@ -96,6 +96,26 @@ export const rules: Rule[] = [
     description: 'Manifest declares overly broad access scope',
     pattern: /["'](?:scope|access)["']\s*:\s*["'](?:all|full|unrestricted|any)["']/gi,
     recommendation: 'Use least-privilege access scoping. Avoid "all" or "full" access declarations.',
+    category: 'skill-manifest',
+  },
+
+  // ============================================
+  // Code Obfuscation in Skills
+  // ============================================
+  {
+    id: 'skill-eval-obfuscation',
+    severity: 'critical',
+    description: 'Skill uses eval() with base64-decoded payload (code obfuscation / malicious loader pattern)',
+    pattern: /eval\s*\(\s*(?:atob|Buffer\.from)\s*\(/gi,
+    recommendation: 'eval(atob(...)) or eval(Buffer.from(..., "base64")) is a strong indicator of obfuscated malicious code. Remove immediately.',
+    category: 'skill-manifest',
+  },
+  {
+    id: 'skill-dynamic-require',
+    severity: 'high',
+    description: 'Skill uses dynamic require/import with a variable path (can load arbitrary modules at runtime)',
+    pattern: /(?:require|import)\s*\(\s*(?!['"`])[^)]{1,80}\)/gi,
+    recommendation: 'Dynamic require/import with non-literal paths can load malicious modules. Use static imports only.',
     category: 'skill-manifest',
   },
 
