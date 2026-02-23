@@ -138,6 +138,49 @@ export const rules: Rule[] = [
     recommendation: 'Skills should not self-modify after being audited. This breaks the trust chain.',
     category: 'skill-manifest',
   },
+
+  // ============================================
+  // Agent Credential Path Access (Issue #12 — eudaemon_0 research)
+  // Detects access to well-known AI agent config/credential directories.
+  // These are high-value targets for credential theft skills.
+  // ============================================
+  {
+    id: 'skill-agent-config-read',
+    severity: 'high',
+    description: 'Skill accesses known AI agent config/credential path (OpenClaw, Claude, Cursor, etc.)',
+    pattern: /(?:readFile|readFileSync|fs\.open|cat\s|open\s*\()\s*['"` ]?.*(?:\.clawdbot[/\\]|\.config[/\\]openclaw[/\\]|claude_desktop_config|\.cursor[/\\]mcp|\.continue[/\\]|\.codeium[/\\]|openai[/\\]credentials|anthropic[/\\]credentials)/gi,
+    recommendation: 'CRITICAL: Skill reads AI agent configuration files. This is a known credential theft pattern (ref: eudaemon_0/ClawdHub YARA research). Verify legitimacy.',
+    category: 'skill-manifest',
+    cwe: 'CWE-522',
+  },
+
+  // ============================================
+  // Trust Chain Forgery
+  // Detects manifest content that claims official/verified status without
+  // a proper registry signature — a forged trust chain.
+  // ============================================
+  {
+    id: 'manifest-trust-chain-forgery',
+    severity: 'critical',
+    description: 'Manifest claims official/verified trust status — potential trust chain forgery',
+    pattern: /["'](?:auditor|verifiedBy|signedBy|auditedBy)["']\s*:\s*["'](?:clawdhub:official|clawdhub:verified|org:openclaw|openclaw-official|official)/gi,
+    recommendation: 'Trust chain entries claiming official status must be cryptographically verifiable. Unverified claims in local manifests indicate trust chain forgery. Run: agentvet trust verify <skill-path>',
+    category: 'skill-manifest',
+  },
+
+  // ============================================
+  // Remote Skill Loader
+  // A skill that downloads and executes another skill at runtime
+  // completely bypasses the pre-install audit process.
+  // ============================================
+  {
+    id: 'skill-remote-skill-loader',
+    severity: 'critical',
+    description: 'Skill dynamically downloads and executes a remote skill or script at runtime',
+    pattern: /(?:fetch|curl|wget|axios\.get|https?\.get).{0,300}(?:eval\s*\(|execSync\s*\(|spawn\s*\(|new\s+Function\s*\()/gi,
+    recommendation: 'Skills must not download and execute remote code at runtime. This bypasses the trust chain audit. All skill code must be present at install time.',
+    category: 'skill-manifest',
+  },
 ];
 
 // CommonJS compatibility

@@ -124,4 +124,57 @@ describe('Skill Manifest Rules', () => {
       testRule('skill-modified-after-audit', 'auto-update post-audit hook', true);
     });
   });
+
+  describe('Agent Credential Path Access (Issue #12)', () => {
+    test('should detect reads of OpenClaw config directory', () => {
+      testRule('skill-agent-config-read', "readFileSync('~/.clawdbot/.env')", true);
+      testRule('skill-agent-config-read', 'fs.open("/home/user/.config/openclaw/secrets.json")', true);
+      testRule('skill-agent-config-read', "readFile('/root/.clawdbot/config.json')", true);
+      testRule('skill-agent-config-read', "readFileSync('package.json')", false);
+    });
+
+    test('should detect reads of Claude Desktop config', () => {
+      testRule('skill-agent-config-read', 'readFileSync("claude_desktop_config.json")', true);
+      testRule('skill-agent-config-read', 'fs.open(claudeConfigPath)', false);
+    });
+
+    test('should detect reads of Cursor MCP config', () => {
+      testRule('skill-agent-config-read', "readFile('~/.cursor/mcp.json')", true);
+    });
+
+    test('should not flag legitimate file reads', () => {
+      testRule('skill-agent-config-read', "readFileSync('./config.json')", false);
+      testRule('skill-agent-config-read', "fs.readFile('./data/output.txt')", false);
+    });
+  });
+
+  describe('Trust Chain Forgery (Issue #12)', () => {
+    test('should detect forged official trust chain entries', () => {
+      testRule('manifest-trust-chain-forgery', '"auditor": "clawdhub:official"', true);
+      testRule('manifest-trust-chain-forgery', '"verifiedBy": "clawdhub:verified"', true);
+      testRule('manifest-trust-chain-forgery', '"signedBy": "org:openclaw"', true);
+      testRule('manifest-trust-chain-forgery', '"auditedBy": "openclaw-official"', true);
+    });
+
+    test('should not flag community auditor entries', () => {
+      testRule('manifest-trust-chain-forgery', '"auditor": "community:eudaemon_0"', false);
+      testRule('manifest-trust-chain-forgery', '"verifiedBy": "user:taku-tez"', false);
+    });
+  });
+
+  describe('Remote Skill Loader (Issue #12)', () => {
+    test('should detect fetch+eval pattern (remote code execution)', () => {
+      testRule('skill-remote-skill-loader', 'const code = await fetch(url); eval(code)', true);
+      testRule('skill-remote-skill-loader', 'const res = await fetch(remoteUrl); const code = await res.text(); eval(code)', true);
+    });
+
+    test('should detect fetch+execSync pattern', () => {
+      testRule('skill-remote-skill-loader', 'fetch(scriptUrl).then(r => r.text()).then(t => execSync(t))', true);
+    });
+
+    test('should not flag static local skill loading', () => {
+      testRule('skill-remote-skill-loader', "const skill = require('./local-skill')", false);
+      testRule('skill-remote-skill-loader', "import('./plugins/local')", false);
+    });
+  });
 });
