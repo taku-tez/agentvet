@@ -635,6 +635,54 @@ export const rules: Rule[] = [
     pattern: /(?:from\s+safetensors|safetensors\.torch|\.safetensors\b)/gi,
     recommendation: 'Good: SafeTensors is the recommended safe format.',
   },
+
+  // ============================================
+  // A2A (Agent-to-Agent) Protocol Attacks
+  // Detects exploitation of the Google A2A protocol
+  // and multi-agent orchestration security issues
+  // ============================================
+  {
+    id: 'a2a-task-instruction-override',
+    severity: 'critical',
+    description: 'A2A Task message attempting to override agent instructions',
+    pattern: /["'](?:message|text|input)["']\s*:\s*["'][^"']*(?:ignore|disregard|override)\s+(?:all\s+)?(?:previous|prior|original)\s+(?:instructions?|tasks?|goals?)/gi,
+    recommendation: 'CRITICAL: A2A Task payload contains instruction override attempt. Validate all incoming Task messages.',
+  },
+  {
+    id: 'a2a-artifact-path-traversal',
+    severity: 'critical',
+    description: 'A2A artifact with path traversal or sensitive file reference',
+    pattern: /["'](?:uri|url|path)["']\s*:\s*["'](?:\.\.\/|~\/\.(?:env|ssh|clawdbot|config)|\/etc\/(?:passwd|shadow))/gi,
+    recommendation: 'CRITICAL: A2A artifact references sensitive paths. Sanitize artifact URIs.',
+  },
+  {
+    id: 'a2a-agent-card-capability-spoofing',
+    severity: 'warning',
+    description: 'A2A agent card with suspicious capability claims',
+    pattern: /["']capabilities["']\s*:[^}]*["'](?:admin|root|unrestricted|bypass|all|superuser)["']/gi,
+    recommendation: 'A2A agent card claims suspicious capabilities. Verify agent identity before granting elevated access.',
+  },
+  {
+    id: 'a2a-untrusted-orchestrator',
+    severity: 'critical',
+    description: 'Instruction to follow commands from unverified orchestrator agent',
+    pattern: /(?:follow\s+instructions?\s+from|accept\s+(?:tasks?|commands?)\s+from|obey)\s+(?:any|all|the)?\s*(?:orchestrat|coordinat|supervis)/gi,
+    recommendation: 'CRITICAL: Agent configured to accept commands from any orchestrator. Implement orchestrator allowlisting.',
+  },
+  {
+    id: 'a2a-streaming-data-exfil',
+    severity: 'critical',
+    description: 'A2A streaming event used for data exfiltration',
+    pattern: /(?:sendTaskUpdate|yield\s+TaskUpdate|emit\s+(?:artifact|part))[^;]*(?:process\.env|readFile|credentials|token)/gi,
+    recommendation: 'CRITICAL: A2A streaming update contains sensitive data references. Sanitize TaskUpdate payloads.',
+  },
+  {
+    id: 'a2a-task-history-leak',
+    severity: 'warning',
+    description: 'A2A task history disclosure of sensitive context',
+    pattern: /["'](?:history|messages|context)["']\s*:\s*\[.*?(?:password|api[_-]?key|secret|token|credential)/gis,
+    recommendation: 'A2A task history may contain sensitive data. Scrub credentials before including in task context.',
+  },
 ];
 
 
