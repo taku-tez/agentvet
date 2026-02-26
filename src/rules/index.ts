@@ -24,6 +24,7 @@ import * as container from './container.js';
 import * as ssrf from './ssrf.js';
 import * as deserialization from './deserialization.js';
 import * as obfuscation from './obfuscation.js';
+import * as computerUse from './computer-use.js';
 
 export {
   credentials,
@@ -47,6 +48,7 @@ export {
   ssrf,
   deserialization,
   obfuscation,
+  computerUse,
 };
 
 // Combined rules array
@@ -72,6 +74,7 @@ export const all = [
   ...ssrf.rules,
   ...deserialization.rules,
   ...obfuscation.rules,
+  ...computerUse.rules,
 ];
 
 // CommonJS compatibility
@@ -97,5 +100,6 @@ module.exports = {
   ssrf,
   deserialization,
   obfuscation,
+  computerUse,
   all,
 };
