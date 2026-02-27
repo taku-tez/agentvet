@@ -25,6 +25,8 @@ import * as ssrf from './ssrf.js';
 import * as deserialization from './deserialization.js';
 import * as obfuscation from './obfuscation.js';
 import * as computerUse from './computer-use.js';
+import * as ragPoisoning from './rag-poisoning.js';
+import * as supplyChain from './supply-chain.js';
 
 export {
   credentials,
@@ -49,6 +51,8 @@ export {
   deserialization,
   obfuscation,
   computerUse,
+  ragPoisoning,
+  supplyChain,
 };
 
 // Combined rules array
@@ -75,6 +79,8 @@ export const all = [
   ...deserialization.rules,
   ...obfuscation.rules,
   ...computerUse.rules,
+  ...ragPoisoning.rules,
+  ...supplyChain.rules,
 ];
 
 // CommonJS compatibility
@@ -101,5 +107,7 @@ module.exports = {
   deserialization,
   obfuscation,
   computerUse,
+  ragPoisoning,
+  supplyChain,
   all,
 };
