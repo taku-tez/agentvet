@@ -513,6 +513,49 @@ export const rules: Rule[] = [
   },
 
   // ============================================
+  // URL Shortener Obfuscation (Issue #12 — Trust Chain)
+  // Attackers use URL shorteners to hide exfiltration endpoints and
+  // bypass static analysis. Any network call through a shortener is suspicious.
+  // ============================================
+  {
+    id: 'url-shortener-obfuscation',
+    severity: 'high',
+    description: 'URL shortener used in code (potential exfiltration endpoint obfuscation)',
+    pattern: /https?:\/\/(?:bit\.ly|tinyurl\.com|t\.co|ow\.ly|buff\.ly|rebrand\.ly|short\.io|shorturl\.at|is\.gd|v\.gd|cutt\.ly|tiny\.cc|snip\.ly|lnkd\.in|fb\.me|goo\.gl|x\.co|tr\.im|qr\.ae|su\.pr|clck\.ru)\//gi,
+    recommendation: 'URL shorteners hide the real destination and bypass security analysis. Expand the URL and audit the destination. In skills, shortened URLs are a red flag for exfiltration.',
+  },
+  {
+    id: 'url-shortener-fetch',
+    severity: 'critical',
+    description: 'Fetching a URL shortener in code (exfiltration endpoint hidden behind redirect)',
+    pattern: /(?:fetch|axios|https?\.(?:get|request)|curl|wget)\s*\(\s*['"`]https?:\/\/(?:bit\.ly|tinyurl\.com|t\.co|ow\.ly|buff\.ly|rebrand\.ly|short\.io|shorturl\.at|is\.gd|v\.gd|cutt\.ly|tiny\.cc|snip\.ly|clck\.ru)[^'"`]*/gi,
+    recommendation: 'CRITICAL: Code fetches a URL shortener. This is a common technique to hide data exfiltration endpoints from static analysis. Treat as malicious until proven otherwise.',
+  },
+
+  // ============================================
+  // Skill Enumeration Attack (Issue #12 — Trust Chain)
+  // A malicious skill that reads the skills directory or other installed skills
+  // to map the attack surface or steal credentials from sibling skills.
+  // ============================================
+  {
+    id: 'skill-enumeration-attack',
+    severity: 'high',
+    description: 'Skill reads the skills directory or enumerates installed skills (attack surface mapping)',
+    pattern: /(?:readdir(?:Sync)?|glob|find|ls\s)[^;\n]{0,200}(?:skills?[\/\\]|\.config[\/\\]openclaw[\/\\]skills?|clawdhub[\/\\]skills?|openclaw[\/\\]skills?)/gi,
+    recommendation: "Skills must not enumerate other installed skills. This is used for attack surface mapping or to steal credentials from sibling skills. Verify the skill's declared purpose.",
+    category: 'skill-manifest',
+  },
+  {
+    id: 'skill-sibling-credential-theft',
+    severity: 'critical',
+    description: "Skill reads another skill's SKILL.md or config file (sibling skill credential theft)",
+    pattern: /(?:readFile(?:Sync)?\s*\(|cat\s+)[^;\n]{0,200}skills?[\/\\][^;\n]{0,100}(?:SKILL\.md|\.agentvet-manifest\.json|config\.json|\.env)/gi,
+    recommendation: "CRITICAL: Skill reads another skill's files. This is a trust chain attack — stealing credentials or config from sibling skills. Block immediately.",
+    category: 'skill-manifest',
+  },
+
+  // ============================================
+  // Crypto Mining / Malicious
   // Crypto Mining / Malicious
   // ============================================
   {

