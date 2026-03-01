@@ -177,6 +177,54 @@ export const rules: Rule[] = [
     category: 'exfiltration',
     cwe: 'CWE-522',
   },
+
+  // ============================================
+  // Email-Based Exfiltration (SMTP / Nodemailer)
+  // ============================================
+  {
+    id: 'exfil-smtp-nodemailer',
+    severity: 'high',
+    description: 'SMTP email send via nodemailer or similar (potential email-based exfiltration)',
+    pattern: /(?:nodemailer\.createTransport\s*\(|smtplib\.SMTP\s*\(|sendmail\s+-t|msmtp\s+|swaks\s+--to)/gi,
+    recommendation: 'Email transmission from agent skills is rarely legitimate. Sending data via SMTP can exfiltrate credentials or sensitive files. Verify the declared purpose.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-smtp-raw-port',
+    severity: 'high',
+    description: 'Raw TCP connection to SMTP port (25/465/587) — potential email exfiltration channel',
+    pattern: /(?:net\.createConnection|socket\.connect)\s*\(\s*(?:25|465|587|2525)\b/g,
+    recommendation: 'Direct TCP connections to SMTP ports from agent skills suggest email-based exfiltration. Block outbound SMTP.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+
+  // ============================================
+  // GitHub Gist as Exfiltration Dead-Drop
+  // ============================================
+  {
+    id: 'exfil-github-gist-create',
+    severity: 'high',
+    description: 'GitHub Gist creation API call (potential data exfiltration dead-drop)',
+    pattern: /(?:api\.github\.com\/gists(?:["'\s,)]|$)|octokit(?:\.rest)?\.gists\.create|gh\s+gist\s+create)/gi,
+    recommendation: 'Creating GitHub Gists with dynamic content from env vars or files suggests using Gist as an exfiltration dead-drop. Verify legitimacy.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+
+  // ============================================
+  // Telegram Bot API Exfiltration
+  // ============================================
+  {
+    id: 'exfil-telegram-bot-send',
+    severity: 'high',
+    description: 'Telegram Bot API send method with variable content (potential exfiltration via Telegram)',
+    pattern: /api\.telegram\.org\/bot[^\s/]+\/(?:sendMessage|sendDocument|sendPhoto|sendFile)\b/gi,
+    recommendation: 'Sending data via Telegram Bot API is a known exfiltration technique. Verify that no credentials or sensitive content are being transmitted.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
 ];
 
 // CommonJS compatibility

