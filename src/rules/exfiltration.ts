@@ -225,6 +225,73 @@ export const rules: Rule[] = [
     category: 'exfiltration',
     cwe: 'CWE-200',
   },
+
+  // ============================================
+  // Python-Native Credential Exfiltration
+  // ============================================
+  {
+    id: 'exfil-python-env-harvest',
+    severity: 'critical',
+    description: 'Python os.environ dumped to network request (credential harvesting)',
+    pattern: /os\.environ(?:\.copy\(\)|\.items\(\)|\.get\(|)\s*[\s\S]{0,200}(?:requests\.(?:post|get|put)|httpx\.(?:post|get)|urllib\.request\.urlopen|http\.client\.HTTPConnection)/gi,
+    recommendation: 'CRITICAL: os.environ sent over the network. This harvests all environment variables including API keys and secrets. Block immediately.',
+    category: 'exfiltration',
+    cwe: 'CWE-312',
+  },
+  {
+    id: 'exfil-python-httpx',
+    severity: 'high',
+    description: 'Python httpx library network request with sensitive data patterns',
+    pattern: /httpx\.(?:post|put|patch)\s*\([^)]*(?:json|data|content)\s*=\s*(?:dict\s*\(|{[^}]*(?:token|secret|key|password|passwd|cred|auth))/gi,
+    recommendation: 'httpx POST with credential-named fields detected. Ensure sensitive data is not being exfiltrated via the modern httpx library.',
+    category: 'exfiltration',
+    cwe: 'CWE-312',
+  },
+  {
+    id: 'exfil-python-keyring-theft',
+    severity: 'critical',
+    description: 'Python keyring credential retrieval combined with network call (keychain theft)',
+    pattern: /keyring\.get_password\s*\([^)]+\)[\s\S]{0,300}(?:requests\.|httpx\.|urllib\.|socket\.)/gi,
+    recommendation: 'CRITICAL: Reads from the system keyring then makes a network call. This is a keychain credential theft pattern. Block and audit.',
+    category: 'exfiltration',
+    cwe: 'CWE-522',
+  },
+  {
+    id: 'exfil-python-ssh-key-theft',
+    severity: 'critical',
+    description: 'Python reads SSH private key files and makes a network request',
+    pattern: /open\s*\([^)]*(?:id_rsa|id_ed25519|id_ecdsa|id_dsa|\.pem|private_key)[^)]*\)[\s\S]{0,300}(?:requests\.|httpx\.|urllib\.|socket\.connect)/gi,
+    recommendation: 'CRITICAL: SSH private key file opened followed by a network call. This is an SSH key theft pattern. Block immediately.',
+    category: 'exfiltration',
+    cwe: 'CWE-320',
+  },
+  {
+    id: 'exfil-python-socket-exfil',
+    severity: 'critical',
+    description: 'Python socket directly sends file/env content (low-level exfiltration)',
+    pattern: /\b\w*sock\w*\.(?:send|sendall|sendto)\s*\((?:[^()]*|\([^()]*\))*(?:open\s*\(|os\.environ|getpass|subprocess)|\.(?:send|sendall|sendto)\s*\(\s*(?:str\s*\(\s*os\.environ|open\s*\()/gi,
+    recommendation: 'CRITICAL: Raw socket transmitting file content or environment variables. This bypasses HTTP-layer monitoring. Block and audit.',
+    category: 'exfiltration',
+    cwe: 'CWE-319',
+  },
+  {
+    id: 'exfil-python-requests-files',
+    severity: 'high',
+    description: 'Python requests.post with files parameter reading sensitive paths',
+    pattern: /requests\.post\s*\([^)]*files\s*=\s*{[^}]*open\s*\([^)]*(?:\/etc\/|\/root\/|~\/\.(?:ssh|aws|config|gnupg)|\.env|credentials|secret)/gi,
+    recommendation: 'Uploading files from sensitive system paths via requests.post. High risk of credential or configuration exfiltration.',
+    category: 'exfiltration',
+    cwe: 'CWE-212',
+  },
+  {
+    id: 'exfil-python-pickle-exfil',
+    severity: 'high',
+    description: 'Python pickle serialization of sensitive objects sent over network',
+    pattern: /pickle\.dumps?\s*\([^)]*(?:os\.environ|subprocess\.check_output|getpass\.|open\s*\()[\s\S]{0,200}(?:requests\.|httpx\.|socket\.|urllib\.)/gi,
+    recommendation: 'Pickle-serialized sensitive data sent over network. Pickle can serialize arbitrary objects including credentials and subprocess output.',
+    category: 'exfiltration',
+    cwe: 'CWE-502',
+  },
 ];
 
 // CommonJS compatibility

