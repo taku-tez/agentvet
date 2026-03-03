@@ -27,6 +27,7 @@ import * as obfuscation from './obfuscation.js';
 import * as computerUse from './computer-use.js';
 import * as ragPoisoning from './rag-poisoning.js';
 import * as supplyChain from './supply-chain.js';
+import * as mcpOauth from './mcp-oauth.js';
 
 export {
   credentials,
@@ -53,6 +54,7 @@ export {
   computerUse,
   ragPoisoning,
   supplyChain,
+  mcpOauth,
 };
 
 // Combined rules array
@@ -81,6 +83,7 @@ export const all = [
   ...computerUse.rules,
   ...ragPoisoning.rules,
   ...supplyChain.rules,
+  ...mcpOauth.rules,
 ];
 
 // CommonJS compatibility
@@ -109,5 +112,6 @@ module.exports = {
   computerUse,
   ragPoisoning,
   supplyChain,
+  mcpOauth,
   all,
 };
