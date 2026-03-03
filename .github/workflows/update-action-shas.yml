@@ -1,0 +1,119 @@
+name: Monthly Action SHA Update
+
+on:
+  schedule:
+    # 毎月1日 09:00 UTC (18:00 JST)
+    - cron: '0 9 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-shas:
+    name: Check and update pinned action SHAs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Update pinned action SHAs
+        id: update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          # 更新対象の action タグと現在の SHA のマッピング
+          declare -A ACTIONS=(
+            ["actions/checkout@v4"]="34e114876b0b11c390a56381ad16ebd13914f8d5"
+            ["actions/checkout@v6"]="de0fac2e4500dabe0009e67214ff5f5447ce83dd"
+            ["actions/setup-node@v4"]="49933ea5288caeca8642d1e84afbd3f7d6820020"
+            ["actions/setup-node@v6"]="6044e13b5dc448c55e2357c09f80417699197238"
+            ["step-security/harden-runner@v2"]="a90bcbc6539c36a85cdfeb73f7e2f433735f215b"
+            ["github/codeql-action/upload-sarif@v3"]="ae9ef3a1d2e3413523c3741725c30064970cc0d4"
+            ["softprops/action-gh-release@v1"]="de2c0eb89ae2a093876385947365aca7b0e5f844"
+            ["softprops/action-gh-release@v2"]="a06a81a03ee405af7f2048a818ed3f03bbf83c7b"
+            ["actions/upload-artifact@v4"]="ea165f8d65b6e75b540449e92b4886f43607fa02"
+          )
+
+          UPDATED=0
+          SUMMARY=""
+
+          for action_tag in "${!ACTIONS[@]}"; do
+            OLD_SHA="${ACTIONS[$action_tag]}"
+
+            # action と tag を分離
+            ACTION=$(echo "$action_tag" | cut -d@ -f1)
+            TAG=$(echo "$action_tag" | cut -d@ -f2)
+
+            # GitHub API で最新 SHA を取得
+            REPO_PATH="${ACTION%%/*}/${ACTION##*/}"
+            if [[ "$ACTION" == *"/"*"/"* ]]; then
+              # サブパス付き (例: github/codeql-action/upload-sarif)
+              REPO_PATH="$(echo $ACTION | cut -d/ -f1)/$(echo $ACTION | cut -d/ -f2)"
+            fi
+
+            NEW_SHA=$(gh api "repos/${REPO_PATH}/git/refs/tags/${TAG}" --jq '.object.sha' 2>/dev/null || echo "")
+
+            # annotated tag の場合はpeel
+            if [ -n "$NEW_SHA" ]; then
+              TYPE=$(gh api "repos/${REPO_PATH}/git/refs/tags/${TAG}" --jq '.object.type' 2>/dev/null || echo "commit")
+              if [ "$TYPE" = "tag" ]; then
+                NEW_SHA=$(gh api "repos/${REPO_PATH}/git/tags/${NEW_SHA}" --jq '.object.sha' 2>/dev/null || echo "$NEW_SHA")
+              fi
+            fi
+
+            if [ -z "$NEW_SHA" ] || [ "$NEW_SHA" = "$OLD_SHA" ]; then
+              continue
+            fi
+
+            echo "🔄 $action_tag: $OLD_SHA → $NEW_SHA"
+            SUMMARY="${SUMMARY}\n- \`${action_tag}\`: \`${OLD_SHA:0:12}\` → \`${NEW_SHA:0:12}\`"
+            UPDATED=1
+
+            # 全 workflow ファイルを置換
+            find .github/workflows -name "*.yml" | xargs sed -i \
+              "s|${OLD_SHA}|${NEW_SHA}|g"
+          done
+
+          echo "updated=$UPDATED" >> $GITHUB_OUTPUT
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.update.outputs.updated == '1'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4 (reuse)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="chore/update-action-shas-$(date +%Y%m)"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git checkout -b "$BRANCH"
+          git add .github/workflows/
+          git commit -m "chore: update pinned action SHAs ($(date +%Y-%m))"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "chore: update pinned action SHAs ($(date +%Y-%m))" \
+            --body "## Action SHA 月次更新
+
+          ${{ steps.update.outputs.summary }}
+
+          自動生成 PR。内容を確認してマージしてください。" \
+            --base main \
+            --head "$BRANCH"
+
+      - name: No updates needed
+        if: steps.update.outputs.updated != '1'
+        run: echo "✅ All action SHAs are up to date."
