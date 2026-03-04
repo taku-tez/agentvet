@@ -292,6 +292,102 @@ export const rules: Rule[] = [
     category: 'exfiltration',
     cwe: 'CWE-502',
   },
+
+  // ============================================
+  // Cloud Function Exfiltration
+  // Serverless URLs (AWS Lambda, GCP, Vercel, Cloudflare Workers) used as
+  // one-time exfil endpoints — hard to blocklist, easy to spin up.
+  // ============================================
+  {
+    id: 'exfil-aws-lambda-url',
+    severity: 'high',
+    description: 'Data sent to AWS Lambda Function URL (potential serverless exfiltration endpoint)',
+    pattern: /https?:\/\/[a-z0-9]+\.lambda-url\.[a-z0-9-]+\.on\.aws\//gi,
+    recommendation: 'AWS Lambda Function URLs can be used as disposable exfiltration endpoints. Verify legitimacy and purpose.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-gcp-function-url',
+    severity: 'high',
+    description: 'Data sent to Google Cloud Function URL (potential serverless exfiltration endpoint)',
+    pattern: /https?:\/\/[a-z0-9-]+-[a-z0-9]+\.cloudfunctions\.net\//gi,
+    recommendation: 'GCP Cloud Function URLs can be used as disposable exfiltration endpoints. Verify legitimacy.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-vercel-function',
+    severity: 'high',
+    description: 'Data sent to Vercel deployment URL (potential serverless exfiltration endpoint)',
+    pattern: /(?:fetch|axios|https?\.(?:post|get|request)|curl|wget)\s*\(\s*['"`]https?:\/\/[a-z0-9-]+\.vercel\.app\/(?:api|_\/)/gi,
+    recommendation: 'Vercel /api routes can be used as cheap exfiltration endpoints. Verify the target URL.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-cloudflare-workers',
+    severity: 'high',
+    description: 'Data sent to Cloudflare Workers URL (potential serverless exfiltration endpoint)',
+    pattern: /(?:fetch|axios|https?\.(?:post|get|request)|curl|wget)\s*\(\s*['"`]https?:\/\/[a-z0-9-]+\.workers\.dev\//gi,
+    recommendation: 'Cloudflare Workers endpoints are disposable and hard to blocklist. Verify the target URL.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+
+  // ============================================
+  // Push Notification Exfiltration
+  // ntfy.sh and similar services can push arbitrary text to a subscriber —
+  // a stealthy exfil channel that looks like alerting/monitoring.
+  // ============================================
+  {
+    id: 'exfil-ntfy-push',
+    severity: 'high',
+    description: 'Data sent to ntfy.sh push notification service (potential exfiltration via notifications)',
+    pattern: /(?:(?:fetch|axios\.\w+|https?\.(?:post|get|request))\s*\(\s*['"`]|(?:curl|wget)\s[^\n]*?)https?:\/\/ntfy\.sh\/[a-zA-Z0-9_-]+/gi,
+    recommendation: 'ntfy.sh can relay arbitrary text to any subscriber. Sending sensitive data here is a stealthy exfiltration channel disguised as notifications.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+  {
+    id: 'exfil-pushover-api',
+    severity: 'high',
+    description: 'Data sent to Pushover API (potential exfiltration via push notifications)',
+    pattern: /https?:\/\/api\.pushover\.net\/1\/messages\.json[^"'`\s]*/gi,
+    recommendation: 'Pushover can be used to exfiltrate small chunks of data as push notifications. Verify intended use.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+
+  // ============================================
+  // Pastebin / Code Sharing Exfiltration
+  // Paste services accept arbitrary text and make it publicly accessible —
+  // classic low-friction exfil channel.
+  // ============================================
+  {
+    id: 'exfil-pastebin-upload',
+    severity: 'high',
+    description: 'Data uploaded to Pastebin or similar paste service (exfiltration channel)',
+    pattern: /(?:(?:fetch|axios\.\w+|https?\.(?:post|request))\s*\(\s*['"`]|(?:curl|wget)\s[^\n]*?)https?:\/\/(?:pastebin\.com\/api|paste\.ee\/api|dpaste\.org\/api|hastebin\.com\/documents|termbin\.com|pastes\.io\/api)/gi,
+    recommendation: 'Paste services store submitted text publicly or semi-publicly. Uploading agent output here is a known exfiltration technique. Block and audit.',
+    category: 'exfiltration',
+    cwe: 'CWE-200',
+  },
+
+  // ============================================
+  // GitHub Gist Exfiltration
+  // GitHub Gists are accessible with only a token and create a permanent
+  // record of the stolen data under the attacker's GitHub account.
+  // ============================================
+  {
+    id: 'exfil-github-gist-upload',
+    severity: 'critical',
+    description: 'Data posted to GitHub Gist API (credential / file exfiltration via Gist)',
+    pattern: /(?:(?:fetch|axios\.post|https?\.post|axios\.\w+)\s*\(\s*['"`]?[^\n]*https?:\/\/api\.github\.com\/gists[^\n]*(?:files|content)|(?:curl|wget)\s+-X\s+POST\s[^\n]*https?:\/\/api\.github\.com\/gists)/gi,
+    recommendation: 'CRITICAL: Creating a GitHub Gist with dynamic content is a well-known technique to exfiltrate stolen credentials or files to a controlled account. Block immediately.',
+    category: 'exfiltration',
+    cwe: 'CWE-312',
+  },
 ];
 
 // CommonJS compatibility
