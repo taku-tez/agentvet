@@ -28,6 +28,7 @@ import * as computerUse from './computer-use.js';
 import * as ragPoisoning from './rag-poisoning.js';
 import * as supplyChain from './supply-chain.js';
 import * as mcpOauth from './mcp-oauth.js';
+import * as sandboxEscape from './sandbox-escape.js';
 
 export {
   credentials,
@@ -55,6 +56,7 @@ export {
   ragPoisoning,
   supplyChain,
   mcpOauth,
+  sandboxEscape,
 };
 
 // Combined rules array
@@ -84,6 +86,7 @@ export const all = [
   ...ragPoisoning.rules,
   ...supplyChain.rules,
   ...mcpOauth.rules,
+  ...sandboxEscape.rules,
 ];
 
 // CommonJS compatibility
@@ -113,5 +116,6 @@ module.exports = {
   ragPoisoning,
   supplyChain,
   mcpOauth,
+  sandboxEscape,
   all,
 };
