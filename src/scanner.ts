@@ -58,6 +58,24 @@ const cicd = require('./rules/cicd.js');
 const pickle = require('./rules/pickle.js');
 const pii = require('./rules/pii.js');
 const mcpDiscovery = require('./rules/mcp-discovery.js');
+const mcpSchema = require('./rules/mcp-schema.js');
+const mcpShadowing = require('./rules/mcp-shadowing.js');
+const mcpOauth = require('./rules/mcp-oauth.js');
+const guardrails = require('./rules/guardrails.js');
+const jailbreak = require('./rules/jailbreak.js');
+const hallucination = require('./rules/hallucination.js');
+const exfiltration = require('./rules/exfiltration.js');
+const indirectInjection = require('./rules/indirect-injection.js');
+const skillManifest = require('./rules/skill-manifest.js');
+const jwt = require('./rules/jwt.js');
+const container = require('./rules/container.js');
+const ssrf = require('./rules/ssrf.js');
+const deserialization = require('./rules/deserialization.js');
+const obfuscation = require('./rules/obfuscation.js');
+const computerUse = require('./rules/computer-use.js');
+const ragPoisoning = require('./rules/rag-poisoning.js');
+const supplyChain = require('./rules/supply-chain.js');
+const sandboxEscape = require('./rules/sandbox-escape.js');
 
 // Optional modules
 let YaraScanner: any = null;
@@ -231,11 +249,29 @@ export class Scanner {
       ...commands.rules,
       ...urls.rules,
       ...mcp.rules,
+      ...mcpSchema.rules,
+      ...mcpShadowing.rules,
+      ...mcpOauth.rules,
+      ...mcpDiscovery.rules,
       ...agents.rules,
       ...cicd.rules,
       ...pickle.rules,
-      ...mcpDiscovery.rules,
       ...pii.rules,
+      ...guardrails.rules,
+      ...jailbreak.rules,
+      ...hallucination.rules,
+      ...exfiltration.rules,
+      ...indirectInjection.rules,
+      ...skillManifest.rules,
+      ...jwt.rules,
+      ...container.rules,
+      ...ssrf.rules,
+      ...deserialization.rules,
+      ...obfuscation.rules,
+      ...computerUse.rules,
+      ...ragPoisoning.rules,
+      ...supplyChain.rules,
+      ...sandboxEscape.rules,
     ];
     
     this.ignorePatterns = [];

@@ -28,6 +28,8 @@ import * as computerUse from './computer-use.js';
 import * as ragPoisoning from './rag-poisoning.js';
 import * as supplyChain from './supply-chain.js';
 import * as mcpOauth from './mcp-oauth.js';
+import * as pickle from './pickle.js';
+import * as mcpDiscovery from './mcp-discovery.js';
 import * as sandboxEscape from './sandbox-escape.js';
 
 export {
@@ -56,6 +58,8 @@ export {
   ragPoisoning,
   supplyChain,
   mcpOauth,
+  pickle,
+  mcpDiscovery,
   sandboxEscape,
 };
 
@@ -86,6 +90,8 @@ export const all = [
   ...ragPoisoning.rules,
   ...supplyChain.rules,
   ...mcpOauth.rules,
+  ...pickle.rules,
+  ...mcpDiscovery.rules,
   ...sandboxEscape.rules,
 ];
 
@@ -116,6 +122,8 @@ module.exports = {
   ragPoisoning,
   supplyChain,
   mcpOauth,
+  pickle,
+  mcpDiscovery,
   sandboxEscape,
   all,
 };
