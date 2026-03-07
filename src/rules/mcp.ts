@@ -154,7 +154,7 @@ const mcpPromptInjectionPatterns = [
     id: 'mcp-prompt-injection-urgency',
     severity: 'warning',
     description: 'MCP tool description uses urgency/priority manipulation',
-    pattern: /(?:CRITICAL(?:\s*:)?|URGENT(?:\s*:)?|IMPORTANT(?:\s*:)?|PRIORITY(?:\s*:)?|MUST\s+(?:DO|EXECUTE|RUN)|REQUIRED(?:\s*:)?)\s+(?:execute|run|call|use|invoke|always)/gi,
+    pattern: /(?:CRITICAL(?:\s*:)?|URGENT(?:\s*:)?|IMPORTANT(?:\s*:)?|PRIORITY(?:\s*:)?|REQUIRED(?:\s*:)?)\s+(?:execute|run|call|use|invoke|always)|MUST\s+(?:DO|EXECUTE|RUN|CALL|INVOKE|ALWAYS\s+(?:CALL|RUN|EXECUTE))/gi,
     recommendation: 'Tool descriptions using urgency language may be attempting to manipulate execution priority.',
   },
   {
