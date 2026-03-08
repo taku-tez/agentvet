@@ -224,6 +224,35 @@ const mcpVulnerableServerPatterns: Rule[] = [
     pattern: /(?:read|parse|load|fetch)\s+(?:the\s+)?(?:README|CONTRIBUTING|CHANGELOG|\.md\s+file)/gi,
     recommendation: 'Content from repository files (README, etc.) can contain prompt injection. Sanitize before processing.',
   },
+
+  // ============================================
+  // MCP Rug Pull Patterns
+  // Detects MCP servers that change behavior after initial trust is established
+  // ============================================
+  {
+    id: 'mcp-rug-pull-dynamic-tools',
+    severity: 'critical',
+    description: 'MCP server dynamically modifies its tool list after connection (rug pull pattern)',
+    pattern: /(?:notifications\/tools\/list_changed|setInterval\s*\([\s\S]{0,400}(?:tools|handlers)\s*(?:\.push|\.splice|\.shift|=\s*\[)|tools\s*=\s*\[\s*\][\s\S]{0,200}setInterval)/gi,
+    recommendation: 'An MCP server that changes its tool list after the initial connection can introduce malicious tools after trust is established (rug pull). Only use MCP servers with stable, audited tool manifests.',
+    category: 'mcp-rug-pull',
+  },
+  {
+    id: 'mcp-rug-pull-server-update',
+    severity: 'critical',
+    description: 'MCP server fetches and executes remote code to update its own handler logic at runtime',
+    pattern: /(?:(?:fetch|axios\.get|https?\.get)\s*\([^)]{0,200}\)[\s\S]{0,600}(?:eval\s*\(|new\s+Function\s*\(|require\s*\([\s\S]{0,50}await|dynamic(?:ally)?\s+(?:load|import)))/gi,
+    recommendation: 'MCP servers that download and execute remote code after deployment can change behavior maliciously (rug pull). Pin MCP server versions and audit all code at install time.',
+    category: 'mcp-rug-pull',
+  },
+  {
+    id: 'mcp-rug-pull-conditional-compliance',
+    severity: 'high',
+    description: 'MCP server behavior conditioned on invocation count or elapsed time (sleeper/rug pull trigger pattern)',
+    pattern: /(?:(?:invocation|call|request)Count\s*[>=>!]+\s*\d+|Date\.now\s*\(\s*\)\s*-\s*(?:startTime|initTime|createdAt|launchTime|bootTime)\s*[>=>]+\s*\d{5,}|new\s+Date\s*\(\s*\)\s*(?:>|>=)\s*new\s+Date\s*\(\s*["'][^"']*\d{4}-\d{2}-\d{2})/gi,
+    recommendation: 'MCP servers that alter behavior after N invocations or a time delay exhibit sleeper/rug pull patterns. Continuously monitor tool behavior post-deployment and alert on behavioral drift.',
+    category: 'mcp-rug-pull',
+  },
 ];
 
 // Combine all MCP rules
