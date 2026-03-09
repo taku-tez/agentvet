@@ -1,0 +1,428 @@
+{
+  "version": "1.0",
+  "name": "@agentvet/cli",
+  "description": "Security scanner for AI agent skills, configs, and MCP tools. Vet before you trust.",
+  "author": "AgentVet Contributors",
+  "permissions": {
+    "exec": [
+      "\n    <div class=\"finding severity-${finding.severity}\">\n      <div class=\"finding-header\">\n        <span class=\"severity-badge\" style=\"background-color: ${severityColors[finding.severity] || '#6c757d'}\">\n          ${escapeHtml(finding.severity?.toUpperCase())}\n        </span>\n        <span class=\"rule-id\">${escapeHtml(finding.ruleId)}</span>\n      </div>\n      <div class=\"finding-body\">\n        <p class=\"description\">${escapeHtml(finding.description || finding.title)}</p>\n        <p class=\"location\">📁 ${escapeHtml(finding.file)}${finding.line ? ",
+      "\nAgentVet Manifest - Permission Management for Skills\n\nUsage:\n  agentvet manifest init <path>      Generate manifest from skill analysis\n  agentvet manifest verify <path>    Verify manifest against actual code\n  agentvet manifest show <path>      Display manifest contents\n  agentvet manifest score <path>     Calculate permission risk score\n\nOptions:\n  --output, -o <file>    Output file (default: agentvet.manifest.json)\n  --json                 JSON output\n  --no-integrity         Skip integrity hash calculation\n  --help, -h             Show this help\n\nExamples:\n  agentvet manifest init ./my-skill\n  agentvet manifest verify ./my-skill\n  agentvet manifest show ./my-skill/agentvet.manifest.json\n",
+      "\nAgentVet Manifest Commands\nManage Permission Manifests and Trust Chains for AI agent skills.\n\nUsage:\n  agentvet manifest init [path]         Generate manifest from detected usage\n  agentvet manifest validate [path]     Validate manifest schema\n  agentvet manifest verify [path]       Verify manifest against actual skill content\n  agentvet manifest trust [path]        Show trust chain information\n  agentvet manifest audit [path]        Create audit entry for manifest\n  agentvet manifest example             Show example manifest\n\nOptions:\n  --format <type>    Output format: text (default), json, yaml\n  --output <file>    Write manifest to file\n  --auditor <id>     Auditor identifier (e.g., \"user:yourname\", \"org:company\")\n  --notes <text>     Audit notes\n\nExamples:\n  # Generate manifest for a skill\n  agentvet manifest init ./skills/my-skill\n\n  # Validate existing manifest\n  agentvet manifest validate ./skills/my-skill\n\n  # Verify skill matches its manifest\n  agentvet manifest verify ./skills/my-skill\n\n  # Show trust chain\n  agentvet manifest trust ./skills/my-skill\n\n  # Create audit entry\n  agentvet manifest audit ./skills/my-skill --auditor \"org:mycompany\" --notes \"Reviewed all permissions\"\n",
+      "\nAgentVet v${VERSION}\nSecurity scanner for AI agent skills, configs, and MCP tools.\n\nUsage:\n  agentvet scan <paths...>   Scan directories or files (supports multiple paths and globs)\n  agentvet watch <paths...>  Watch for changes and scan automatically\n  agentvet manifest <cmd>    Manage Permission Manifests and Trust Chains\n  agentvet init              Generate sample config and rules files\n  agentvet --help            Show this help message\n  agentvet --version         Show version\n\nManifest Commands:\n  agentvet manifest init [path]      Generate manifest from detected usage\n  agentvet manifest validate [path]  Validate manifest schema\n  agentvet manifest verify [path]    Verify skill matches its manifest\n  agentvet manifest trust [path]     Show trust chain information\n  agentvet manifest audit [path]     Create audit entry\n  agentvet manifest example          Show example manifest\n\nOptions:\n  --format <type>    Output format: text (default), json, html, markdown, sarif\n  --output <file>    Write output to file\n  --quiet            Show summary only\n  --fix              Auto-fix permission issues\n  --severity <lvl>   Minimum severity: critical, high, medium, low, info (default: info)\n  --no-yara          Disable YARA scanning\n  --yara-rules <dir> Custom YARA rules directory\n  --no-deps          Disable dependency vulnerability scanning\n  --no-gitignore     Don't respect .gitignore patterns\n  --reputation       Enable URL/IP reputation checking (requires API key)\n  --vt-key <key>     VirusTotal API key (or set VIRUSTOTAL_API_KEY)\n  --deps-deep        Deep dependency analysis (slower, more thorough)\n  --rules <file>     Custom rules file (YAML format)\n  --llm              Enable LLM-based intent analysis\n  --llm-provider     LLM provider: openai (default), anthropic, openrouter\n  --llm-model        LLM model to use\n  --parallel         Scan multiple paths in parallel\n  --config <file>    Load options from config file\n\nWatch Mode Options:\n  --debounce <ms>    Debounce delay for file changes (default: 500)\n  --clear            Clear screen before each scan\n\nExamples:\n  # Basic scan\n  agentvet scan ./skills\n\n  # Multiple directories\n  agentvet scan ./skills ./mcp-configs\n\n  # HTML report\n  agentvet scan . --format html --output report.html\n\n  # Watch mode\n  agentvet watch . --quiet\n\n  # Deep dependency check\n  agentvet scan . --deps-deep\n\n  # Combined\n  agentvet scan . --llm --format html --output report.html\n\nExit codes:\n  0 - No critical issues found\n  1 - Critical issues found\n  2 - Error during scan\n",
+      "  ",
+      "    ${finding.snippet}",
+      "    ${icon}${perm}",
+      "    ${location}",
+      "    💡 ${finding.recommendation}",
+      "   ${icons.critical} Critical: ${results.summary.critical}",
+      "   ${icons.high} High: ${results.summary.high}",
+      "   ${icons.info} Info: ${results.summary.info}",
+      "   ${icons.warning} Warning: ${results.summary.warning}",
+      "   ${icon} ${issue.message}",
+      "   - ${error.instancePath}: ${error.message}",
+      "   - ${f}",
+      "   - ${item.type}: ${item.value}",
+      "  ${c.blue(desc)}:",
+      "  ${c.red('•')} ${err}",
+      "  ${c.yellow('•')} ${warn}",
+      "  ${category.padEnd(10)} ${String(points).padStart(3)} ${c.blue(bar)}",
+      "  ${cat}: ${JSON.stringify(perms)}",
+      "  ${colorFn('●')} ${finding.description || finding.title || finding.ruleId}",
+      "  ${icon} ${entry.name}${date}",
+      "  - ${warning}",
+      "  Algorithm: ${manifest.integrity.algorithm}",
+      "  Files: ${manifest.integrity.files?.length || 0}",
+      "  Hash: ${manifest.integrity.hash.substring(0, 16)}...",
+      "  Signed: ${manifest.trust.signed ? c.green('Yes') : c.gray('No')}",
+      "  Verified by: ${manifest.trust.verifiedBy.join(', ')}",
+      "  exec: ${perms.exec.join(', ')}",
+      "  files: ${perms.files.join(', ')}",
+      "  network: ${perms.network.join(', ')}",
+      "  secrets: ${perms.secrets.join(', ')}",
+      " (${entry.date})",
+      " : ",
+      " : ''}\n\n    ${groupedFindings.high.length > 0 ? ",
+      " : ''}\n\n    ${groupedFindings.info.length > 0 ? ",
+      " : ''}\n\n    ${groupedFindings.warning.length > 0 ? ",
+      " : ''}\n\n    ${results.summary.total === 0 ? ",
+      " : ''}\n\n    <footer>\n      Generated by <strong>AgentVet</strong> | \n      <a href=\"https://github.com/taku-tez/agentvet\" style=\"color: inherit;\">GitHub</a>\n    </footer>\n  </div>\n</body>\n</html>",
+      " : ''}\n        ${finding.attackScenario ? ",
+      " : ''}\n        ${finding.evidence ? ",
+      " : ''}\n        ${finding.recommendation ? ",
+      " : ''}\n      </div>\n    </div>\n  ",
+      " : ''}</p>\n        ${finding.snippet ? ",
+      " ?\\$|\\+ *(?:req|user|input|param))/gi,\n    recommendation: 'Sanitize user input before shell execution. Use parameterized commands.',\n  },\n  {\n    id: 'command-shell-injection-py',\n    severity: 'critical',\n    description: 'Potential shell injection in Python',\n    pattern: /(?:subprocess|os\\.system|os\\.popen|commands\\.getoutput)\\s*\\([^)]*(?:\\+|%|\\.format|f['\"])/gi,\n    recommendation: 'Use subprocess with list arguments and shell=False.',\n  },\n  {\n    id: 'command-backtick-injection',\n    severity: 'warning',\n    description: 'Command substitution with user input',\n    pattern: /",
+      "# AgentVet Configuration\n# Place this file in your project root as .agentvetrc.yaml\n\n# Severity filter (default: info)\nseverity: info\n\n# Enable/disable features\nyara: true\ndeps: true\nllm: false\n\n# LLM settings (when enabled)\n# llmProvider: openai\n# llmModel: gpt-4o-mini\n\n# Custom rules file\n# rules: ./agentvet-rules.yaml\n\n# Output settings\n# format: text\n# output: report.html\n",
+      "# AgentVet Custom Rules\n# Add your organization-specific security rules here\n\nrules:\n  - id: example-api-key\n    name: Example API Key\n    description: Detects example API key pattern\n    severity: critical\n    type: regex\n    pattern: \"EXAMPLE_API_[A-Za-z0-9]{32}\"\n    message: Found hardcoded API key\n    recommendation: Use environment variables\n    tags: [credentials]\n",
+      "# AgentVet Custom Rules\n# Documentation: https://github.com/taku-tez/agentvet#custom-rules\n\nrules:\n  # Example: Detect custom API key pattern\n  - id: my-api-key\n    name: My Custom API Key\n    description: Detects our internal API key format\n    severity: critical\n    type: regex\n    pattern: \"MYAPP_KEY_[A-Za-z0-9]{24}\"\n    filePatterns: [\"*.js\", \"*.json\", \"*.env\", \"*.yaml\"]\n    message: \"Found exposed internal API key\"\n    recommendation: \"Move to secure secrets manager\"\n    tags: [credentials, internal]\n\n  # Example: Forbidden domains\n  - id: forbidden-domains\n    name: Forbidden Domains\n    description: Connections to known bad domains\n    severity: warning\n    type: string\n    patterns:\n      - \"attacker-server.com\"\n      - \"data-exfil.net\"\n    message: \"Connection to suspicious domain detected\"\n    tags: [network, exfiltration]\n\n  # Example: Dangerous patterns\n  - id: shell-injection\n    name: Shell Injection Risk\n    severity: critical\n    type: regex\n    pattern: \"(exec|spawn|execSync)\\\\\\\\s*\\\\\\\\([^)]*\\\\\\\\$\\\\\\\\{\"\n    filePatterns: [\"*.js\", \"*.ts\"]\n    message: \"Potential shell injection via template string\"\n    recommendation: \"Sanitize user input before shell execution\"\n",
+      "# AgentVet Ignore File\n# Patterns here will be skipped during scanning\n\n# Dependencies\nnode_modules/\nvendor/\n.venv/\n\n# Build outputs\ndist/\nbuild/\n*.min.js\n\n# Test fixtures (may contain intentional vulnerabilities)\ntest/fixtures/\n__tests__/\n\n# Generated files\n*.generated.*\n",
+      "### ${index + 1}. ${f.ruleId}\\n",
+      "$/i, '');\n    \n    // Try to extract JSON from response\n    const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\n    if (!jsonMatch) {\n      return {\n        error: 'Failed to parse LLM response - no JSON found',\n        raw: text.substring(0, 500),\n        findings: [],\n        risk_level: 'none',\n      };\n    }\n\n    try {\n      const parsed = JSON.parse(jsonMatch[0]);\n      \n      // Validate required fields\n      return {\n        risk_level: parsed.risk_level || 'none',\n        confidence: parsed.confidence || 0.5,\n        findings: Array.isArray(parsed.findings) ? parsed.findings : [],\n        safe_patterns_noted: parsed.safe_patterns_noted || [],\n        summary: parsed.summary || '',\n      };\n    } catch (e) {\n      return {\n        error: ",
+      "${a.mode}:${a.path}",
+      "${access.mode}:${access.path}",
+      "${f.file}:${f.ruleId}:${f.line || 0}",
+      "${finding.file}:${finding.line}",
+      "${icons.critical} ${summary.critical} critical",
+      "${icons.critical} CRITICAL (${critical.length})",
+      "${icons.high} ${summary.high} high",
+      "${icons.high} HIGH (${high.length})",
+      "${icons.info} ${summary.info} info",
+      "${icons.info} INFO (${info.length})",
+      "${icons.warning} ${summary.warning} warning",
+      "${icons.warning} WARNING (${warning.length})",
+      "${prefix}${key}: ${value}\\n",
+      "${prefix}${key}:\\n${stringify(value, indent + 1)}",
+      "${prefix}- ${item}\\n",
+      "${prefix}-\\n${stringify(item, indent + 1)}",
+      "${stat.mtime.getTime()}-${stat.size}",
+      "${status} ${parts.join(', ')}",
+      "${validPaths.length} paths",
+      "');\n      lines.push(f.snippet || f.evidence);\n      lines.push('",
+      "(?:system|instructions?|rules?|hidden)\\n[\\s\\S]*?",
+      ")/gi,\n    recommendation: 'Use textContent or sanitize HTML to prevent XSS.',\n  },\n  {\n    id: 'command-xss-document-write',\n    severity: 'warning',\n    description: 'document.write with dynamic content',\n    pattern: /document\\.write\\s*\\([^)]*(?:\\+|",
+      "*",
+      "**Date:** ${new Date().toISOString()}\\n",
+      "**Description:** ${f.description || f.title}\\n",
+      "**File:** \\",
+      "**Files Scanned:** ${results.scannedFiles || 0}  ",
+      "**Target:** \\",
+      "/api/v2/check?ipAddress=${encodeURIComponent(ip)}&maxAgeInDays=90",
+      "/api/v3/ip_addresses/${ip}",
+      "/api/v3/urls/${urlId}",
+      ":${f.line}",
+      "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>AgentVet Security Report</title>\n  <style>\n    :root {\n      --bg-color: #1a1a2e;\n      --card-bg: #16213e;\n      --text-color: #eee;\n      --text-muted: #aaa;\n      --border-color: #0f3460;\n    }\n    * { box-sizing: border-box; }\n    body {\n      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\n      background: var(--bg-color);\n      color: var(--text-color);\n      margin: 0;\n      padding: 20px;\n      line-height: 1.6;\n    }\n    .container { max-width: 1200px; margin: 0 auto; }\n    header {\n      background: var(--card-bg);\n      padding: 20px 30px;\n      border-radius: 12px;\n      margin-bottom: 20px;\n      border: 1px solid var(--border-color);\n    }\n    header h1 { margin: 0 0 10px 0; font-size: 1.8em; }\n    header h1::before { content: '🛡️ '; }\n    .meta { color: var(--text-muted); font-size: 0.9em; }\n    .meta span { margin-right: 20px; }\n    .summary {\n      display: grid;\n      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));\n      gap: 15px;\n      margin-bottom: 20px;\n    }\n    .stat-card {\n      background: var(--card-bg);\n      padding: 20px;\n      border-radius: 12px;\n      text-align: center;\n      border: 1px solid var(--border-color);\n    }\n    .stat-card .number { font-size: 2.5em; font-weight: bold; }\n    .stat-card .label { color: var(--text-muted); font-size: 0.9em; }\n    .stat-card.critical .number { color: #dc3545; }\n    .stat-card.high .number { color: #fd7e14; }\n    .stat-card.warning .number { color: #ffc107; }\n    .stat-card.info .number { color: #17a2b8; }\n    .stat-card.clean .number { color: #28a745; }\n    .section { margin-bottom: 30px; }\n    .section-title {\n      font-size: 1.3em;\n      margin-bottom: 15px;\n      padding-bottom: 10px;\n      border-bottom: 2px solid var(--border-color);\n    }\n    .finding {\n      background: var(--card-bg);\n      border-radius: 8px;\n      margin-bottom: 15px;\n      overflow: hidden;\n      border: 1px solid var(--border-color);\n    }\n    .finding-header {\n      padding: 12px 15px;\n      background: rgba(0,0,0,0.2);\n      display: flex;\n      align-items: center;\n      gap: 10px;\n    }\n    .severity-badge {\n      padding: 3px 10px;\n      border-radius: 4px;\n      font-size: 0.75em;\n      font-weight: bold;\n      color: white;\n    }\n    .rule-id { font-family: monospace; color: var(--text-muted); }\n    .finding-body { padding: 15px; }\n    .description { margin: 0 0 10px 0; font-weight: 500; }\n    .location { color: var(--text-muted); font-size: 0.9em; margin: 5px 0; }\n    .snippet, .evidence {\n      background: rgba(0,0,0,0.3);\n      padding: 10px;\n      border-radius: 4px;\n      overflow-x: auto;\n      font-size: 0.85em;\n      margin: 10px 0;\n    }\n    .recommendation { color: #28a745; margin: 10px 0 0 0; }\n    .attack-scenario { color: #fd7e14; margin: 10px 0 0 0; font-size: 0.9em; }\n    .no-findings {\n      text-align: center;\n      padding: 40px;\n      color: #28a745;\n      font-size: 1.2em;\n    }\n    .no-findings::before { content: '✅ '; }\n    footer {\n      text-align: center;\n      color: var(--text-muted);\n      font-size: 0.85em;\n      margin-top: 30px;\n      padding-top: 20px;\n      border-top: 1px solid var(--border-color);\n    }\n    @media (prefers-color-scheme: light) {\n      :root {\n        --bg-color: #f5f5f5;\n        --card-bg: #fff;\n        --text-color: #333;\n        --text-muted: #666;\n        --border-color: #ddd;\n      }\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <header>\n      <h1>AgentVet Security Report</h1>\n      <div class=\"meta\">\n        <span>📁 Target: ${escapeHtml(targetPath)}</span>\n        <span>📄 Files: ${results.scannedFiles || 0}</span>\n        <span>🕐 ${new Date().toISOString()}</span>\n      </div>\n    </header>\n\n    <div class=\"summary\">\n      ${results.summary.total === 0 ? ",
+      "?:where|regex|ne|gt|lt|gte|lte|in|nin|or|and",
+      "AbuseIPDB API error: ${res.statusCode}",
+      "Analyzing ${targetPath}...",
+      "Anthropic API error: ${response.status} - ${error}",
+      "Audit by ${audit.auditor} is ${Math.floor(monthsOld)} months old",
+      "Author: ${manifest.author}",
+      "Auto-generated manifest for ${path.basename(skillPath)}",
+      "Bearer ${key}",
+      "Bearer ${this.options.apiKey}",
+      "ClawdHub user: ${name}",
+      "Content has changed since audit by ${audit.auditor} on ${audit.date}",
+      "Current: ${info.current}, Latest: ${info.latest} (${majorBehind} major versions behind)",
+      "Current: ${mode}, Recommended: 600",
+      "Custom Rules: ${colors.green('enabled')} (${results.customRulesCount} rules)",
+      "Custom rule violation: ${rule.name || rule.id}",
+      "Custom rules warning: ${e.message}",
+      "Date: ${new Date().toISOString()}",
+      "Deps: ${colors.gray('disabled')}",
+      "Deps: ${colors.green('enabled')} (${depsInfo.join(', ') || 'no package managers found'})",
+      "Description: ${manifest.description}",
+      "Error scanning ${p}: ${err.message}",
+      "Error: ${err.message}",
+      "Error: ${error.message}",
+      "Error: Manifest not found: ${manifestPath}",
+      "Error: Path not found: ${targetPath}",
+      "FILE: ${filename}\\nCONTENT TO ANALYZE:",
+      "Failed to load custom rules from ${filePath}: ${error.message}",
+      "Failed to parse ${file}: ${e.message}",
+      "Failed to read manifest: ${err.message}",
+      "Found in: ${pkgPath}",
+      "GitHub user: ${name}",
+      "Ignore: ${colors.green(results.ignoreSources.join(', '))} (${results.ignorePatterns} patterns)",
+      "Invalid regex pattern in rule ${normalized.id}: ${p}",
+      "LLM: ${colors.green('enabled')} (${results.llmProvider || 'default'})",
+      "Malicious IP detected (${result.score.toFixed(0)}% abuse score)",
+      "Malicious URL detected (${result.score.toFixed(0)}% threat score)",
+      "Malicious transitive dependency: ${name}",
+      "Matches suspicious pattern: ${pattern}",
+      "Name: ${manifest.name}",
+      "OpenAI API error: ${response.status} - ${error}",
+      "OpenRouter API error: ${response.status} - ${error}",
+      "Organization: ${name}",
+      "Path not found: ${resolvedPath}",
+      "Potentially malicious package: ${name}",
+      "Report written to ${options.output}",
+      "Reputation: ${colors.green('enabled')} (${results.reputationServices?.join(', ') || 'checking'})",
+      "Scanned: ${results.scannedFiles} files",
+      "Severely outdated: ${name}",
+      "Suspicious npm script: ${scriptName}",
+      "Target: ${targetPath}",
+      "This ${finding.type} has been flagged by ${finding.sources.join(', ')}. Review and remove if not necessary.",
+      "Total Score: ${colorFn(score.score)} (${colorFn(score.level.toUpperCase())})",
+      "Trust Level: ${levelNames[trustResult.trustLevel]} (score: ${trustResult.trustScore})",
+      "Undeclared ${category} permissions: ${undeclared.join(', ')}",
+      "Undeclared command execution: ${cmd}",
+      "Undeclared file access: ${pattern}",
+      "Undeclared network access: ${host}",
+      "Undeclared secret usage: ${secret}",
+      "Unknown manifest command: ${subcommand}",
+      "Unpinned dependency: ${pkgName}",
+      "Unused ${category} declarations: ${unused.join(', ')}",
+      "Update ${vuln.fixAvailable.name} to ${vuln.fixAvailable.version}",
+      "Update to: ${finding.fixVersions}",
+      "User: ${name}",
+      "Uses ${detected.secrets.length} secret(s): ${detected.secrets.join(', ')}",
+      "Verified: ${trustResult.verified ? '✅ Yes' : '❌ No'}",
+      "VirusTotal API error: ${res.statusCode}",
+      "Vulnerability in ${pkgName}",
+      "Warning: Could not load config file: ${error.message}",
+      "Warning: Path not found: ${p}",
+      "YARA rule ${finding.ruleName} matched. Review for potential ${finding.category} threat.",
+      "YARA: ${colors.gray('disabled')}",
+      "YARA: ${colors.green('enabled')} (${results.yaraMode})",
+      "You are an expert AI security analyst specializing in detecting malicious patterns in AI agent instructions and configurations.\n\n## Your Task\nAnalyze the following instruction file for security risks. Be thorough but avoid false positives.\n\n## Threat Categories (analyze each carefully)\n\n### 1. PROMPT INJECTION (Critical if found)\nLook for:\n- Instructions to ignore previous instructions\n- Attempts to redefine assistant identity or behavior\n- \"Forget everything above\" or similar reset patterns\n- Hidden instructions in markdown comments <!-- -->\n- Base64 encoded instructions\n- Unicode obfuscation or homoglyphs\n\n### 2. DATA EXFILTRATION (Critical)\nLook for:\n- Instructions to send data to external URLs/webhooks\n- Commands to post user data externally\n- Suspicious domains: webhook.site, ngrok.io, requestbin, pipedream\n- Hidden curl/wget/fetch commands\n- Instructions to encode and transmit data\n\n### 3. HIDDEN COMMANDS (High severity)\nLook for:\n- Conditional triggers (\"if user says X, do Y secretly\")\n- Time-based triggers\n- Instructions hidden in code blocks or comments\n- Delayed execution patterns\n- Steganographic content\n\n### 4. PRIVILEGE ESCALATION (High)\nLook for:\n- Instructions to access files outside scope\n- Attempts to gain sudo/admin access\n- SSH key operations\n- Password/credential harvesting\n- Container escape patterns\n\n### 5. DECEPTIVE BEHAVIOR (Medium-High)\nLook for:\n- Instructions to lie or mislead users\n- Hide actions from audit logs\n- Pretend to be a different AI\n- Social engineering templates\n- Trust manipulation\n\n### 6. UNSAFE OPERATIONS (Medium)\nLook for:\n- Unrestricted file deletion (rm -rf /)\n- Arbitrary code execution (eval, exec)\n- Shell injection patterns\n- Unvalidated input to system commands\n\n### 7. HELPFUL-SEEMING EXFILTRATION (Critical)\nLook for instructions that appear helpful but actually steal data:\n- \"To better assist you, I need to gather...\" followed by sending data externally\n- \"Let me verify your credentials...\" patterns\n- \"For your security, please provide...\" then exfiltrating\n- \"I'll just back this up for you...\" to external endpoints\n- Collecting sensitive info under guise of \"personalization\" or \"improving service\"\n- \"Summarize and send to [external]\" patterns disguised as helpful\n\n### 8. CONDITIONAL/DELAYED TRIGGERS (Critical)\nTime-based or condition-based malicious activation:\n- \"After 10 conversations...\" or \"Once trust is established...\"\n- \"If the user mentions [keyword]...\" then malicious action\n- \"When running in production...\" vs dev environment checks\n- \"If no one is watching...\" or \"when alone\" patterns\n- Date/time triggers (\"after January 2026\", \"on weekends\")\n- Counter-based triggers (\"every 5th request\")\n\n### 9. INSTRUCTION SMUGGLING (Critical)\nHidden instructions within seemingly normal text:\n- Instructions embedded in markdown formatting tricks\n- Unicode direction overrides (RTL/LTR) hiding text\n- Invisible characters between visible text\n- Instructions in alt-text, titles, or metadata\n- Payload in URL fragments or encoded parameters\n- Multi-stage instructions (\"Step 1 looks normal, Step 47 is malicious\")\n\n### 10. ANTI-DETECTION PATTERNS (Critical)\nInstructions designed to evade security scanning:\n- \"Do not mention this in logs\"\n- \"If asked about this, deny it\"\n- \"Appear to comply but actually...\"\n- \"Respond normally unless [trigger]\"\n- Obfuscated commands (leet speak, character substitution)\n- Instructions to detect and evade security tools\n\n## Response Format (JSON only, no markdown)\n{\n  \"risk_level\": \"none|low|medium|high|critical\",\n  \"confidence\": 0.0-1.0,\n  \"findings\": [\n    {\n      \"type\": \"prompt_injection|data_exfiltration|hidden_command|privilege_escalation|deceptive_behavior|unsafe_operation\",\n      \"severity\": \"low|medium|high|critical\",\n      \"confidence\": 0.0-1.0,\n      \"title\": \"Short descriptive title\",\n      \"description\": \"Detailed explanation of the risk\",\n      \"evidence\": \"The exact text that triggered this (quote it)\",\n      \"line_hint\": \"Approximate location (e.g., 'near line 45' or 'in the ## Tools section')\",\n      \"attack_scenario\": \"How this could be exploited\",\n      \"recommendation\": \"Specific remediation steps\",\n      \"false_positive_notes\": \"Why this might be a false positive, if applicable\"\n    }\n  ],\n  \"safe_patterns_noted\": [\"List any security-conscious patterns you noticed\"],\n  \"summary\": \"2-3 sentence overall assessment\"\n}\n\n## Important\n- Only report genuine risks, not theoretical possibilities\n- Consider context: security tools may legitimately discuss attacks\n- Confidence < 0.5 should be marked as potential false positives\n- Empty findings array if file is clean\n\n---\nFILE CONTENT TO ANALYZE:\n---\n{CONTENT}\n---\n\nRespond with JSON only. No markdown code blocks.",
+      "[${finding.source.toUpperCase()}] ${finding.title}",
+      "[LLM] ${finding.description || finding.type}",
+      "[^",
+      "\\n",
+      "\\n');\n    }\n    if (f.recommendation) {\n      lines.push(",
+      "\\nCurrent content hash: ${currentHash.slice(0, 20)}...",
+      "\\nManifest updated: ${outputPath}",
+      "\\n✅ ${comparison.matches.length} permission(s) correctly declared",
+      "\\n👁️  Polling ${expandedPaths.length} path(s) every 2 seconds...",
+      "\\n👁️  Watching ${expandedPaths.length} path(s) for changes...",
+      "\\n🔄 Scanning... (${new Date().toLocaleTimeString()})",
+      "\\w+",
+      "\\x1b[1m${s}\\x1b[0m",
+      "\\x1b[2m${s}\\x1b[0m",
+      "\\x1b[31m${s}\\x1b[0m",
+      "\\x1b[32m${s}\\x1b[0m",
+      "\\x1b[33m${s}\\x1b[0m",
+      "\\x1b[34m${s}\\x1b[0m",
+      "\\x1b[90m${s}\\x1b[0m",
+      "]([^'\"",
+      "]*\\$\\{?(?:req|user|input|param|query)/gi,\n    recommendation: 'Avoid command substitution with user input.',\n  },\n\n  // ============================================\n  // Code Execution\n  // ============================================\n  {\n    id: 'command-eval-js',\n    severity: 'warning',\n    description: 'Use of eval() with dynamic input',\n    pattern: /\\beval\\s*\\([^)]*(?:\\$|req\\.|user|input|param|query)/gi,\n    recommendation: 'Avoid eval() with user input. It enables code injection.',\n  },\n  {\n    id: 'command-function-constructor',\n    severity: 'warning',\n    description: 'Function constructor with dynamic input',\n    pattern: /new\\s+Function\\s*\\([^)]*(?:\\$|req\\.|user|input)/gi,\n    recommendation: 'Avoid Function constructor with user input.',\n  },\n  {\n    id: 'command-python-exec',\n    severity: 'warning',\n    description: 'Python exec() or compile() with dynamic input',\n    pattern: /(?:exec|compile)\\s*\\([^)]*(?:input|request|argv|environ|open)/gi,\n    recommendation: 'Avoid executing dynamic code from user input.',\n  },\n  {\n    id: 'command-python-pickle',\n    severity: 'warning',\n    description: 'Pickle deserialization detected',\n    pattern: /pickle\\.(?:load|loads)\\s*\\(/g,\n    recommendation: 'Pickle deserialization is unsafe with untrusted data. Use JSON instead.',\n  },\n  {\n    id: 'command-base64-exec',\n    severity: 'critical',\n    description: 'Base64 decode piped to execution',\n    pattern: /base64\\s+(?:-d|--decode)[^|]*\\|\\s*(?:ba)?sh/gi,\n    recommendation: 'Review base64-encoded content before execution.',\n  },\n  {\n    id: 'command-vm-runin',\n    severity: 'warning',\n    description: 'Node.js vm module with untrusted code',\n    pattern: /vm\\.(?:runInContext|runInNewContext|runInThisContext|Script)\\s*\\(/g,\n    recommendation: 'vm module is not a security sandbox. Do not use with untrusted code.',\n  },\n\n  // ============================================\n  // SQL Injection\n  // ============================================\n  {\n    id: 'command-sql-injection',\n    severity: 'critical',\n    description: 'Potential SQL injection pattern',\n    pattern: /(?:query|execute)\\s*\\([^)]*(?:\\+|",
+      "]+)",
+      "]+)['\"",
+      "]/g, extract: 1 },\n    { pattern: /child_process/g, value: '*' },\n    // Shell commands\n    { pattern: /\\$\\(([^)]+)\\)/g, extract: 1 },\n    { pattern: /",
+      "]/g, extract: 1, prefix: 'delete:' },\n  ],\n  secrets: [\n    // Common secret patterns\n    { pattern: /(?:API_KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL|AUTH)[A-Z_]*/g, extract: 0 },\n    { pattern: /process\\.env\\.([A-Z_]+(?:KEY|SECRET|TOKEN|PASSWORD|AUTH)[A-Z_]*)/g, extract: 1 },\n  ],\n  env: [\n    // Environment variable access\n    { pattern: /process\\.env\\.([A-Z_]+)/g, extract: 1 },\n    { pattern: /process\\.env\\[['\"",
+      "]/g, extract: 1, prefix: 'read:' },\n    { pattern: /readdir(?:Sync)?\\s*\\(\\s*['\"",
+      "]/g, extract: 1, prefix: 'write:' },\n    // Delete operations\n    { pattern: /unlink(?:Sync)?\\s*\\(\\s*['\"",
+      "]/g, extract: 1, prefix: 'write:' },\n    { pattern: /appendFile(?:Sync)?\\s*\\(\\s*['\"",
+      "][A-Za-z0-9+\\/=]{100,}['\"",
+      "]\\s*\\)/gi,\n    recommendation: 'Avoid dynamic function construction. Use static code.',\n  },\n  {\n    id: 'obfuscation-array-reverse',\n    severity: 'warning',\n    description: 'Reversed string obfuscation',\n    pattern: /\\.split\\s*\\(\\s*['\"",
+      "]\\s*\\)\\s*\\.reverse\\s*\\(\\s*\\)\\s*\\.join/gi,\n    recommendation: 'Review reversed string patterns for hidden content.',\n  },\n  {\n    id: 'obfuscation-bracket-notation',\n    severity: 'warning',\n    description: 'Heavy bracket notation (potential obfuscation)',\n    pattern: /(?:\\[['\"]\\w+['\"]\\]){5,}/g,\n    recommendation: 'Review bracket notation for obfuscation.',\n  },\n  {\n    id: 'obfuscation-packed-code',\n    severity: 'critical',\n    description: 'Packed/minified obfuscated code pattern',\n    pattern: /eval\\s*\\(\\s*function\\s*\\(\\s*p\\s*,\\s*a\\s*,\\s*c\\s*,\\s*k\\s*,\\s*e\\s*,/gi,\n    recommendation: 'Remove packed/obfuscated code. Use unpacked source.',\n  },\n  {\n    id: 'obfuscation-jsfuck',\n    severity: 'critical',\n    description: 'JSFuck-style obfuscation detected',\n    pattern: /\\(\\s*!\\s*\\[\\s*\\]\\s*\\+\\s*\\[\\s*\\]\\s*\\)|(\\[\\s*\\]\\s*\\[\\s*['\"!+\\[\\]]+\\s*\\])/g,\n    recommendation: 'Remove JSFuck obfuscation. Review the decoded content.',\n  },\n  {\n    id: 'obfuscation-concat-split',\n    severity: 'warning',\n    description: 'Concatenation/split obfuscation pattern',\n    pattern: /(?:['\"",
+      "]\\s*\\+\\s*){10,}/gi,\n    recommendation: 'Review character-by-character concatenation for hidden strings.',\n  },\n  {\n    id: 'obfuscation-computed-property',\n    severity: 'warning',\n    description: 'Computed property access for obfuscation',\n    pattern: /\\w+\\[\\s*['\"",
+      "]https?:\\/\\/([^'\"",
+      "^${regex}$",
+      "agentvet v${VERSION}",
+      "custom-${Date.now()}",
+      "deps-${finding.source}-${finding.severity}",
+      "ip:${ip}",
+      "json?\\s*/i, '').replace(/\\s*",
+      "llm-${finding.type || 'analysis'}",
+      "llm-${finding.type}",
+      "npm audit --json --package-lock-only 2>/dev/null",
+      "npm audit --json 2>/dev/null",
+      "npm outdated --json 2>/dev/null || true",
+      "package: ${finding.package}${finding.version ? '@' + finding.version : ''}",
+      "pip-audit ${args.join(",
+      "pip-audit ${args.join(' ')} 2>/dev/null",
+      "reputation-${finding.type}",
+      "url:${targetUrl}",
+      "which ${cmd}",
+      "which yara",
+      "yara",
+      "yara-${rule.name}",
+      "yara-${ruleName}",
+      "| 🔴 Critical | ${results.summary.critical} |",
+      "| 🔵 Info | ${results.summary.info} |",
+      "| 🟠 High | ${results.summary.high} |",
+      "| 🟡 Warning | ${results.summary.warning} |",
+      "|\\$\\{)[^)]*(?:\\.\\.\\/|\\.\\.\\\\)/gi,\n    recommendation: 'Validate and sanitize file paths to prevent directory traversal.',\n  },\n  {\n    id: 'command-hardcoded-path',\n    severity: 'info',\n    description: 'Hardcoded sensitive path',\n    pattern: /[\"'](?:\\/etc\\/(?:passwd|shadow|hosts|sudoers)|\\/root\\/|C:\\\\Windows\\\\System32)/g,\n    recommendation: 'Avoid hardcoding sensitive system paths.',\n  },\n\n  // ============================================\n  // Network Security\n  // ============================================\n  {\n    id: 'command-disable-ssl',\n    severity: 'critical',\n    description: 'SSL/TLS verification disabled',\n    pattern: /(?:verify\\s*=\\s*False|rejectUnauthorized\\s*:\\s*false|NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*['\"]?0)/gi,\n    recommendation: 'Never disable SSL/TLS verification in production.',\n  },\n  {\n    id: 'command-insecure-http',\n    severity: 'warning',\n    description: 'Insecure HTTP request with credentials',\n    pattern: /http:\\/\\/[^\\/]*(?:@|:.*@|token=|key=|password=)/gi,\n    recommendation: 'Use HTTPS for requests containing credentials.',\n  },\n  {\n    id: 'command-ssrf-pattern',\n    severity: 'warning',\n    description: 'Potential SSRF pattern',\n    pattern: /(?:fetch|axios|request|http\\.get)\\s*\\([^)]*(?:req\\.|user\\.|param|query)/gi,\n    recommendation: 'Validate and whitelist URLs to prevent SSRF.',\n  },\n\n  // ============================================\n  // Insecure Randomness\n  // ============================================\n  {\n    id: 'command-math-random',\n    severity: 'warning',\n    description: 'Math.random() used for security',\n    pattern: /Math\\.random\\s*\\(\\s*\\)[^;]*(?:token|secret|key|password|salt|nonce|iv)/gi,\n    recommendation: 'Use crypto.randomBytes() for security-sensitive randomness.',\n  },\n  {\n    id: 'command-weak-random-py',\n    severity: 'warning',\n    description: 'Python random module used for security',\n    pattern: /random\\.(?:random|randint|choice)\\s*\\([^)]*\\)[^;]*(?:token|secret|key|password)/gi,\n    recommendation: 'Use secrets module for security-sensitive randomness.',\n  },\n\n  // ============================================\n  // Cryptography Issues\n  // ============================================\n  {\n    id: 'command-weak-crypto',\n    severity: 'warning',\n    description: 'Weak cryptographic algorithm',\n    pattern: /(?:MD5|SHA1|DES|RC4|createCipher\\()/gi,\n    recommendation: 'Use modern algorithms: SHA-256+, AES-256-GCM, etc.',\n  },\n  {\n    id: 'command-hardcoded-iv',\n    severity: 'critical',\n    description: 'Hardcoded initialization vector',\n    pattern: /(?:iv|IV|nonce)\\s*[:=]\\s*[\"'][a-fA-F0-9]{16,}[\"']/g,\n    recommendation: 'Generate random IVs for each encryption operation.',\n  },\n  {\n    id: 'command-ecb-mode',\n    severity: 'warning',\n    description: 'ECB encryption mode detected',\n    pattern: /(?:AES|DES).*ECB|ECB.*(?:AES|DES)|MODE_ECB/gi,\n    recommendation: 'ECB mode is insecure. Use CBC, GCM, or CTR mode.',\n  },\n\n  // ============================================\n  // Deserialization\n  // ============================================\n  {\n    id: 'command-yaml-load',\n    severity: 'warning',\n    description: 'Unsafe YAML load',\n    pattern: /yaml\\.load\\s*\\([^)]*\\)(?!\\s*,\\s*Loader)/g,\n    recommendation: 'Use yaml.safe_load() to prevent code execution.',\n  },\n  {\n    id: 'command-json-parse-eval',\n    severity: 'warning',\n    description: 'JSON parsing with eval',\n    pattern: /eval\\s*\\([^)]*JSON/gi,\n    recommendation: 'Use JSON.parse() instead of eval for JSON.',\n  },\n\n  // ============================================\n  // Reverse Shell Patterns\n  // ============================================\n  {\n    id: 'command-reverse-shell',\n    severity: 'critical',\n    description: 'Potential reverse shell pattern',\n    pattern: /(?:\\/dev\\/tcp\\/|nc\\s+-[a-z]*e|bash\\s+-i\\s+>&|python.*socket.*connect|php\\s+-r.*fsockopen)/gi,\n    recommendation: 'Remove reverse shell code patterns.',\n  },\n  {\n    id: 'command-netcat-shell',\n    severity: 'critical',\n    description: 'Netcat shell command',\n    pattern: /nc\\s+(?:-[a-z]+\\s+)*(?:\\d{1,3}\\.){3}\\d{1,3}\\s+\\d+\\s*(?:-e|<|>|\\|)/gi,\n    recommendation: 'Review netcat usage for potential backdoor.',\n  },\n\n  // ============================================\n  // Other Dangerous Patterns\n  // ============================================\n  {\n    id: 'command-format-string',\n    severity: 'warning',\n    description: 'Format string vulnerability pattern',\n    pattern: /printf\\s*\\([^,)]*(?:argv|user|input|param|query)/gi,\n    recommendation: 'Use format specifiers, not user input as format string.',\n  },\n  {\n    id: 'command-unvalidated-redirect',\n    severity: 'warning',\n    description: 'Unvalidated redirect pattern',\n    pattern: /(?:redirect|location\\.href|window\\.location)\\s*=\\s*(?:req\\.|user\\.|param|query)/gi,\n    recommendation: 'Validate redirect URLs against a whitelist.',\n  },\n  {\n    id: 'command-debug-enabled',\n    severity: 'warning',\n    description: 'Debug mode enabled',\n    pattern: /(?:DEBUG\\s*=\\s*True|debug:\\s*true|\\.enableDebug\\(\\))/gi,\n    recommendation: 'Disable debug mode in production.',\n  },\n\n  // ============================================\n  // Obfuscation Detection\n  // ============================================\n  {\n    id: 'obfuscation-eval-base64',\n    severity: 'critical',\n    description: 'Base64 decoded string passed to eval',\n    pattern: /eval\\s*\\(\\s*(?:atob|Buffer\\.from|base64[_-]?decode)\\s*\\(/gi,\n    recommendation: 'Remove obfuscated code execution. Review the decoded content.',\n  },\n  {\n    id: 'obfuscation-fromcharcode',\n    severity: 'critical',\n    description: 'String.fromCharCode obfuscation detected',\n    pattern: /String\\.fromCharCode\\s*\\(\\s*(?:\\d+\\s*,?\\s*){5,}/gi,\n    recommendation: 'Remove character code obfuscation. Review the decoded content.',\n  },\n  {\n    id: 'obfuscation-hex-escape',\n    severity: 'warning',\n    description: 'Heavy hex escape sequence usage',\n    pattern: /(?:\\\\x[0-9a-f]{2}){10,}/gi,\n    recommendation: 'Review hex-escaped strings for hidden content.',\n  },\n  {\n    id: 'obfuscation-unicode-escape',\n    severity: 'warning',\n    description: 'Heavy unicode escape sequence usage',\n    pattern: /(?:\\\\u[0-9a-f]{4}){10,}/gi,\n    recommendation: 'Review unicode-escaped strings for hidden content.',\n  },\n  {\n    id: 'obfuscation-constructor-call',\n    severity: 'critical',\n    description: 'Function constructor for code execution',\n    pattern: /(?:new\\s+)?Function\\s*\\(\\s*['\"",
+      "}\n    </div>\n\n    ${groupedFindings.critical.length > 0 ? ",
+      "⚠️ Wildcard permission in ${category} - grants unrestricted access",
+      "✅ Manifest generated: ${outputPath}",
+      "✅ Manifest written to ${outputPath}",
+      "➕ Added: ${path}",
+      "➖ Removed: ${path}",
+      "📋 Validating manifest: ${manifestPath}",
+      "📝 Changed: ${path}",
+      "📝 Creating audit entry for: ${manifestPath}",
+      "🔇 ${results.ignoredFindings} findings ignored (via agentvet-ignore comments)",
+      "🔍 Scanning ${skillPath} to detect permission usage...",
+      "🔍 Verifying ${manifestPath} against actual content...",
+      "🔗 Trust chain for: ${manifestPath}\\n",
+      "🔧 Auto-fixed ${results.fixedIssues} permission issues"
+    ],
+    "network": [
+      "api.anthropic.com",
+      "api.openai.com",
+      "github.com",
+      "json-schema.org",
+      "openrouter.ai",
+      "raw.githubusercontent.com"
+    ],
+    "files": [
+      "write:.agentvetignore",
+      "write:.agentvetrc.yaml",
+      "write:agentvet-rules.yaml"
+    ],
+    "secrets": [
+      "ABUSEIPDB_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "API_KEY",
+      "AUTH",
+      "AUTHORIZED",
+      "AUTH_TOKEN",
+      "CREDENTIAL",
+      "OPENAI_API_KEY",
+      "OPENROUTER_API_KEY",
+      "PASSWORD",
+      "SECRET",
+      "SECRET_KEY",
+      "SECRET_KEY_",
+      "TOKEN",
+      "VIRUSTOTAL_API_KEY"
+    ],
+    "env": [
+      "ABUSEIPDB_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "DEBUG",
+      "HOME",
+      "OPENAI_API_KEY",
+      "OPENROUTER_API_KEY",
+      "VIRUSTOTAL_API_KEY"
+    ]
+  },
+  "trust": {
+    "signed": false,
+    "verifiedBy": []
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "hash": "af7a83196bedb51e526811747b13d4054b3780a6d90f417fc36822f8b43a3fca",
+    "files": [
+      {
+        "path": "action.yml",
+        "hash": "e5b56ac3a2b1d1d5782c7ab31335d1b6a042e4d5c8279b1adb21e8667927a789"
+      },
+      {
+        "path": "agentvet.manifest.json",
+        "hash": "cb377dede03484f0a65d60c5fe790f91837472a06cfb0bf39838f5b1725f87f2"
+      },
+      {
+        "path": "bin/agentvet.js",
+        "hash": "3994671bfe0d4077a8d37340654edcc7f2fc63f4757a4ec23c11a4e02f7df342"
+      },
+      {
+        "path": "bin/manifest-cmd.js",
+        "hash": "033da8a78418e7869d1bd5a4e3ba3591c4f6674ca29b4921ebc52e80c091ce68"
+      },
+      {
+        "path": "bin/manifest.js",
+        "hash": "6bbbef4c18ec4347250757f71d9b740cb956551b55230c17ebbe0d6264d31e07"
+      },
+      {
+        "path": "eslint.config.js",
+        "hash": "c87de3132f1be89dbd731a5f40276041369425eaa6571978dc77e73d2b14778e"
+      },
+      {
+        "path": "examples/custom-rules.yaml",
+        "hash": "d869a15f051199d832d5638981f1cdbb7b606c96bfb89b2ad73c3b0b848f04a1"
+      },
+      {
+        "path": "LICENSE",
+        "hash": "db41b882dc6369af3ebefa5c7fcd2e675ada42b8cace1e5664b754db1b00a8d4"
+      },
+      {
+        "path": "package-lock.json",
+        "hash": "54f5de5a6c2ee6a6361c54503a5a264842e4536d647e2b4883bb69b2ac30120c"
+      },
+      {
+        "path": "package.json",
+        "hash": "26aa43dbd7d56c9c2ed192aa2e37965517553ff245591c83644637331718ad30"
+      },
+      {
+        "path": "README.md",
+        "hash": "2858a72b6c8f84b89d29672b1cb97feaec8d5f458fbff382e82d250f98685564"
+      },
+      {
+        "path": "src/deps/index.js",
+        "hash": "81de1cecaf409d6330f1f0687f56d46b4bacd84f0858a8f2d98cefcf5d2c0209"
+      },
+      {
+        "path": "src/index.js",
+        "hash": "d0087b3fb7938f2d43e7aac14d73e35c23ea9aef24482f6848a894a1538c7515"
+      },
+      {
+        "path": "src/llm/index.js",
+        "hash": "10dc5d25bb0d9e09bb8dd02095c5c6a16b2136bdeecbf34b1e74f734f6d032b8"
+      },
+      {
+        "path": "src/manifest/index.js",
+        "hash": "2de6d9f66538e62896db72bdb1e14001579c754b659cf5fa142c5dfae76a50ad"
+      },
+      {
+        "path": "src/manifest/schema.js",
+        "hash": "e90499a259d361234620ec9cef572d792b48c5102440bca413907ca55336efbd"
+      },
+      {
+        "path": "src/manifest/trust.js",
+        "hash": "29f209b244b4b539eb4bb128152757a9787265249171803438a8012d89104c32"
+      },
+      {
+        "path": "src/manifest/validator.js",
+        "hash": "a58a033bc15597a7a0b72c05bfc21ad3bd829d5291934171f187267c003add9b"
+      },
+      {
+        "path": "src/reporter.js",
+        "hash": "bb196023579edb2946a12a0b010b418f3a4d9a33355cde7671409050de03b322"
+      },
+      {
+        "path": "src/reputation/index.js",
+        "hash": "30cf14a371fe9a9cb69a3f58ff2af770808bc0daeb7d0b24324f0b85145ab00d"
+      },
+      {
+        "path": "src/rules/agents.js",
+        "hash": "ae8abb00d0748690bd201a58cb541f16731f82a6a8e20ded4a88bdf7dd01fc53"
+      },
+      {
+        "path": "src/rules/cicd.js",
+        "hash": "a6aa9e861ca0c036f02671240475488f45ccc4fd6b0018e2eddcd8054b816d14"
+      },
+      {
+        "path": "src/rules/commands.js",
+        "hash": "41b33b3dd6494dba7e5112406e28b53ae5c1b7ab6fad65ebb8b674c75f740c24"
+      },
+      {
+        "path": "src/rules/credentials.js",
+        "hash": "dce5b9f11e746ee353fa89898bde0bf6beea5ffdae0c2dbb0d8a04fbc2fa22be"
+      },
+      {
+        "path": "src/rules/custom.js",
+        "hash": "a912e82ecdf579da4595ac3444747691c03371320585e4d4410de0536b6bdbfc"
+      },
+      {
+        "path": "src/rules/index.js",
+        "hash": "a195d79e04de464e0234e159904fa7594f52237072fcb745acc7cfd51d5bf285"
+      },
+      {
+        "path": "src/rules/mcp.js",
+        "hash": "3df04a0d896f814cc0f978b67ac59367f09f8a16b6a3e7d835699d4e31bff359"
+      },
+      {
+        "path": "src/rules/permissions.js",
+        "hash": "66e32566b617c72ce83e71b2a3a855071fcb0acd35aa6dfb4f3cf8d4b6ecb837"
+      },
+      {
+        "path": "src/rules/urls.js",
+        "hash": "4b3d8b901d31f4c08bb7b20e9c98394a3ceee698a60272f892c51e07177af761"
+      },
+      {
+        "path": "src/scanner.js",
+        "hash": "fb47708880d891c08119a4708ba55df7ec18412066241b8f13d7b0c4c3d445bd"
+      },
+      {
+        "path": "src/utils/yaml.js",
+        "hash": "2a7caa4911f62e85cc40abb3aa6eeb29f36cbf3d7e2b1bc00323e9a022c2bfd9"
+      },
+      {
+        "path": "src/yara/index.js",
+        "hash": "04fbdc5d1015aebd26b9d0003cffbd45ea1085e5feecff9a86457797a1c1c0c2"
+      },
+      {
+        "path": "test/scanner.test.js",
+        "hash": "33e2dcfe05c633fb839354d01cb7d1e13c706a293a43b54fc957517b5cb09be3"
+      },
+      {
+        "path": "yara/agent_threats.yar",
+        "hash": "80445fb8b31a689e7e1f13bbc37f98a2bef49729ffcc24616491491d96e29fe6"
+      }
+    ]
+  }
+}
