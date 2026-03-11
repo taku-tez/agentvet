@@ -32,6 +32,7 @@ import * as pickle from './pickle.js';
 import * as mcpDiscovery from './mcp-discovery.js';
 import * as sandboxEscape from './sandbox-escape.js';
 import * as toolPoisoning from './tool-poisoning.js';
+import * as agentMemory from './agent-memory.js';
 
 export {
   credentials,
@@ -63,6 +64,7 @@ export {
   mcpDiscovery,
   sandboxEscape,
   toolPoisoning,
+  agentMemory,
 };
 
 // Combined rules array
@@ -96,6 +98,7 @@ export const all = [
   ...mcpDiscovery.rules,
   ...sandboxEscape.rules,
   ...toolPoisoning.rules,
+  ...agentMemory.rules,
 ];
 
 // CommonJS compatibility
@@ -129,5 +132,6 @@ module.exports = {
   mcpDiscovery,
   sandboxEscape,
   toolPoisoning,
+  agentMemory,
   all,
 };
