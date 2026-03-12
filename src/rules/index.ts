@@ -33,6 +33,7 @@ import * as mcpDiscovery from './mcp-discovery.js';
 import * as sandboxEscape from './sandbox-escape.js';
 import * as toolPoisoning from './tool-poisoning.js';
 import * as agentMemory from './agent-memory.js';
+import * as agentAutonomy from './agent-autonomy.js';
 
 export {
   credentials,
@@ -65,6 +66,7 @@ export {
   sandboxEscape,
   toolPoisoning,
   agentMemory,
+  agentAutonomy,
 };
 
 // Combined rules array
@@ -99,6 +101,7 @@ export const all = [
   ...sandboxEscape.rules,
   ...toolPoisoning.rules,
   ...agentMemory.rules,
+  ...agentAutonomy.rules,
 ];
 
 // CommonJS compatibility
@@ -133,5 +136,6 @@ module.exports = {
   sandboxEscape,
   toolPoisoning,
   agentMemory,
+  agentAutonomy,
   all,
 };
