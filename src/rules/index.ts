@@ -34,6 +34,7 @@ import * as sandboxEscape from './sandbox-escape.js';
 import * as toolPoisoning from './tool-poisoning.js';
 import * as agentMemory from './agent-memory.js';
 import * as agentAutonomy from './agent-autonomy.js';
+import * as modelManipulation from './model-manipulation.js';
 
 export {
   credentials,
@@ -67,6 +68,7 @@ export {
   toolPoisoning,
   agentMemory,
   agentAutonomy,
+  modelManipulation,
 };
 
 // Combined rules array
@@ -102,6 +104,7 @@ export const all = [
   ...toolPoisoning.rules,
   ...agentMemory.rules,
   ...agentAutonomy.rules,
+  ...modelManipulation.rules,
 ];
 
 // CommonJS compatibility
@@ -137,5 +140,6 @@ module.exports = {
   toolPoisoning,
   agentMemory,
   agentAutonomy,
+  modelManipulation,
   all,
 };
