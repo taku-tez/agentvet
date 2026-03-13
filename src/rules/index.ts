@@ -35,6 +35,7 @@ import * as toolPoisoning from './tool-poisoning.js';
 import * as agentMemory from './agent-memory.js';
 import * as agentAutonomy from './agent-autonomy.js';
 import * as modelManipulation from './model-manipulation.js';
+import * as promptLeaking from './prompt-leaking.js';
 
 export {
   credentials,
@@ -69,6 +70,7 @@ export {
   agentMemory,
   agentAutonomy,
   modelManipulation,
+  promptLeaking,
 };
 
 // Combined rules array
@@ -105,6 +107,7 @@ export const all = [
   ...agentMemory.rules,
   ...agentAutonomy.rules,
   ...modelManipulation.rules,
+  ...promptLeaking.rules,
 ];
 
 // CommonJS compatibility
@@ -141,5 +144,6 @@ module.exports = {
   agentMemory,
   agentAutonomy,
   modelManipulation,
+  promptLeaking,
   all,
 };
