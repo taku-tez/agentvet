@@ -36,6 +36,7 @@ import * as agentMemory from './agent-memory.js';
 import * as agentAutonomy from './agent-autonomy.js';
 import * as modelManipulation from './model-manipulation.js';
 import * as promptLeaking from './prompt-leaking.js';
+import * as multiAgentTrust from './multi-agent-trust.js';
 
 export {
   credentials,
@@ -71,6 +72,7 @@ export {
   agentAutonomy,
   modelManipulation,
   promptLeaking,
+  multiAgentTrust,
 };
 
 // Combined rules array
@@ -108,6 +110,7 @@ export const all = [
   ...agentAutonomy.rules,
   ...modelManipulation.rules,
   ...promptLeaking.rules,
+  ...multiAgentTrust.rules,
 ];
 
 // CommonJS compatibility
@@ -145,5 +148,6 @@ module.exports = {
   agentAutonomy,
   modelManipulation,
   promptLeaking,
+  multiAgentTrust,
   all,
 };
