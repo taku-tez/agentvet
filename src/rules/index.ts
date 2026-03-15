@@ -37,6 +37,7 @@ import * as agentAutonomy from './agent-autonomy.js';
 import * as modelManipulation from './model-manipulation.js';
 import * as promptLeaking from './prompt-leaking.js';
 import * as multiAgentTrust from './multi-agent-trust.js';
+import * as contextWindowPoisoning from './context-window-poisoning.js';
 
 export {
   credentials,
@@ -73,6 +74,7 @@ export {
   modelManipulation,
   promptLeaking,
   multiAgentTrust,
+  contextWindowPoisoning,
 };
 
 // Combined rules array
@@ -111,6 +113,7 @@ export const all = [
   ...modelManipulation.rules,
   ...promptLeaking.rules,
   ...multiAgentTrust.rules,
+  ...contextWindowPoisoning.rules,
 ];
 
 // CommonJS compatibility
@@ -149,5 +152,6 @@ module.exports = {
   modelManipulation,
   promptLeaking,
   multiAgentTrust,
+  contextWindowPoisoning,
   all,
 };
