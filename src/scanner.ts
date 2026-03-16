@@ -76,6 +76,14 @@ const computerUse = require('./rules/computer-use.js');
 const ragPoisoning = require('./rules/rag-poisoning.js');
 const supplyChain = require('./rules/supply-chain.js');
 const sandboxEscape = require('./rules/sandbox-escape.js');
+const toolPoisoning = require('./rules/tool-poisoning.js');
+const agentMemory = require('./rules/agent-memory.js');
+const agentAutonomy = require('./rules/agent-autonomy.js');
+const modelManipulation = require('./rules/model-manipulation.js');
+const promptLeaking = require('./rules/prompt-leaking.js');
+const multiAgentTrust = require('./rules/multi-agent-trust.js');
+const contextWindowPoisoning = require('./rules/context-window-poisoning.js');
+const pathTraversal = require('./rules/path-traversal.js');
 
 // Optional modules
 let YaraScanner: any = null;
@@ -272,6 +280,14 @@ export class Scanner {
       ...ragPoisoning.rules,
       ...supplyChain.rules,
       ...sandboxEscape.rules,
+      ...toolPoisoning.rules,
+      ...agentMemory.rules,
+      ...agentAutonomy.rules,
+      ...modelManipulation.rules,
+      ...promptLeaking.rules,
+      ...multiAgentTrust.rules,
+      ...contextWindowPoisoning.rules,
+      ...pathTraversal.rules,
     ];
     
     this.ignorePatterns = [];

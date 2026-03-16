@@ -38,6 +38,7 @@ import * as modelManipulation from './model-manipulation.js';
 import * as promptLeaking from './prompt-leaking.js';
 import * as multiAgentTrust from './multi-agent-trust.js';
 import * as contextWindowPoisoning from './context-window-poisoning.js';
+import * as pathTraversal from './path-traversal.js';
 
 export {
   credentials,
@@ -114,6 +115,7 @@ export const all = [
   ...promptLeaking.rules,
   ...multiAgentTrust.rules,
   ...contextWindowPoisoning.rules,
+  ...pathTraversal.rules,
 ];
 
 // CommonJS compatibility
@@ -153,5 +155,6 @@ module.exports = {
   promptLeaking,
   multiAgentTrust,
   contextWindowPoisoning,
+  pathTraversal,
   all,
 };
