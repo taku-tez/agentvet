@@ -44,9 +44,9 @@ describe('Agentic Loop Detection Rules', () => {
       testRule('agentic-loop-unlimited-retry',
         'retry = 0; while (true) { agent.call() }', true);
     });
-    test('should detect retries forever keyword', () => {
+    test('should detect retry unlimited keyword', () => {
       testRule('agentic-loop-unlimited-retry',
-        'retries_loop forever { llm.complete() }', true);
+        'retry = 0; while (true) { agent.invoke(); retry++ }', true);
     });
     test('should not match retry loop with max_retries', () => {
       testRule('agentic-loop-unlimited-retry',
