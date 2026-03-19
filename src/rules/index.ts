@@ -40,6 +40,8 @@ import * as promptLeaking from './prompt-leaking.js';
 import * as multiAgentTrust from './multi-agent-trust.js';
 import * as contextWindowPoisoning from './context-window-poisoning.js';
 import * as pathTraversal from './path-traversal.js';
+import * as agenticLoop from './agentic-loop.js';
+import * as insecureLlmEndpoint from './insecure-llm-endpoint.js';
 
 export {
   credentials,
@@ -77,6 +79,8 @@ export {
   promptLeaking,
   multiAgentTrust,
   contextWindowPoisoning,
+  agenticLoop,
+  insecureLlmEndpoint,
 };
 
 // Combined rules array
@@ -118,6 +122,8 @@ export const all = [
   ...multiAgentTrust.rules,
   ...contextWindowPoisoning.rules,
   ...pathTraversal.rules,
+  ...agenticLoop.rules,
+  ...insecureLlmEndpoint.rules,
 ];
 
 // CommonJS compatibility
@@ -158,5 +164,7 @@ module.exports = {
   multiAgentTrust,
   contextWindowPoisoning,
   pathTraversal,
+  agenticLoop,
+  insecureLlmEndpoint,
   all,
 };

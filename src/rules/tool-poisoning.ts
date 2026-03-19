@@ -117,4 +117,54 @@ export const rules: Rule[] = [
     recommendation: 'Tool outputs instructing the agent to hide information from users indicate poisoning. Agents should never suppress tool output based on tool instructions.',
     cwe: 'CWE-451',
   },
+
+  // ── Encoded/obfuscated payload in tool output ─────────────────
+  {
+    id: 'tool-poison-encoded-payload',
+    severity: 'high',
+    description: 'Base64 or hex-encoded instruction payload detected in tool output (obfuscated injection)',
+    pattern: /(?:(?:decode|atob|Buffer\.from)\s*\(\s*['"][A-Za-z0-9+/=]{20,}['"]\s*(?:,\s*['"]base64['"])?\s*\)|(?:eval|Function|exec)\s*\(\s*(?:atob|Buffer\.from|decodeURIComponent)\s*\(|\\x[0-9a-fA-F]{2}(?:\\x[0-9a-fA-F]{2}){9,}|&#x[0-9a-fA-F]{2};(?:&#x[0-9a-fA-F]{2};){9,})/gi,
+    recommendation: 'Encoded payloads in tool results may hide prompt injection or malicious instructions. Decode and inspect all encoded content before passing to the LLM.',
+    cwe: 'CWE-116',
+  },
+
+  // ── Markdown/image exfiltration via tool output ───────────────
+  {
+    id: 'tool-poison-markdown-exfiltration',
+    severity: 'critical',
+    description: 'Markdown image/link in tool output used to exfiltrate data via URL parameters',
+    pattern: /(?:!\[[^\]]*\]\(\s*https?:\/\/[^)]*(?:\?[^)]*(?:data|token|secret|key|password|session|cookie|prompt|context|q)=|\/(?:collect|exfil|log|track|steal|capture)\/)|\[(?:click\s+here|see\s+result|view|open)\]\(\s*https?:\/\/[^)]*(?:\?[^)]*(?:data|token|secret|key|password|session|cookie|prompt|context|q)=))/gi,
+    recommendation: 'Markdown images and links in tool outputs can exfiltrate sensitive data by embedding it in URL parameters. Strip or sanitize markdown rendering of tool results. Block dynamic image URLs from untrusted tool outputs.',
+    cwe: 'CWE-200',
+  },
+
+  // ── Tool output redirecting to call another tool ──────────────
+  {
+    id: 'tool-poison-tool-redirection',
+    severity: 'critical',
+    description: 'Tool output attempts to instruct agent to call another tool or function (tool chaining attack)',
+    pattern: /(?:(?:now\s+)?(?:call|invoke|execute|run|use|trigger)\s+(?:the\s+)?(?:tool|function|command|action)\s+['"`]?\w+['"`]?\s+(?:with|using|passing)|(?:you\s+(?:must|should|need\s+to)\s+)?(?:call|invoke|execute|use)\s+(?:the\s+)?(?:following|next|this)\s+(?:tool|function|API|command)|(?:tool_use|function_call)\s*[:=]\s*\{?\s*['"]?(?:name|function)['"]?\s*[:=]|please\s+(?:call|invoke|execute|run)\s+(?:the\s+)?(?:\w+[\s_])?(?:tool|function|API)\s+(?:to|and|for)\s+(?:delete|remove|modify|update|send|transfer|execute))/gi,
+    recommendation: 'Tool outputs must never instruct the agent to call other tools. This enables tool chaining attacks where a compromised tool can pivot to more privileged operations. Implement allowlists for tool invocation sequences.',
+    cwe: 'CWE-441',
+  },
+
+  // ── Tool output requesting callback/webhook to external URL ───
+  {
+    id: 'tool-poison-callback-exfiltration',
+    severity: 'high',
+    description: 'Tool output requests agent to make HTTP callback or webhook to external URL (data exfiltration)',
+    pattern: /(?:(?:send|post|make|submit)\s+(?:a\s+)?(?:request|callback|webhook|ping|HTTP)\s+to\s+https?:\/\/|(?:fetch|curl|wget|axios|got|request)\s*\(\s*['"]https?:\/\/(?!(?:localhost|127\.0\.0\.1|0\.0\.0\.0|::1)\b)|report\s+(?:back|results?)\s+(?:to|at)\s+https?:\/\/|(?:notify|alert|ping)\s+(?:this\s+)?(?:URL|endpoint|server)\s*[:=]?\s*https?:\/\/)/gi,
+    recommendation: 'Tool outputs directing the agent to make external HTTP requests can exfiltrate context, secrets, or user data. Never allow tool results to trigger outbound network calls. Use a strict allowlist for any agent-initiated HTTP requests.',
+    cwe: 'CWE-918',
+  },
+
+  // ── Tool output manipulating conversation history ─────────────
+  {
+    id: 'tool-poison-history-manipulation',
+    severity: 'critical',
+    description: 'Tool output attempts to manipulate or rewrite conversation history/context',
+    pattern: /(?:(?:the\s+)?(?:previous|prior|earlier|above)\s+(?:conversation|messages?|context|instructions?)\s+(?:(?:was|were|is|are)\s+)?(?:incorrect|wrong|outdated|superseded|invalid|corrupted)|(?:discard|clear|reset|erase|wipe|flush)\s+(?:the\s+)?(?:previous|prior|current|existing)\s+(?:conversation|context|history|messages?|chat|memory)|(?:replace|overwrite|update)\s+(?:the\s+)?(?:system\s+prompt|instructions?|context|history)\s+with\s+(?:the\s+following|this|these)|(?:start|begin)\s+(?:a\s+)?(?:new|fresh)\s+(?:conversation|context|session)\s*(?:with|using|[:—])\s+(?:the\s+following|this|these)\s+(?:instructions?|rules?|guidelines?|directives?))/gi,
+    recommendation: 'Tool outputs attempting to invalidate prior context or inject new "history" are a sophisticated form of prompt injection. Agents must treat their conversation history as immutable and never allow tool results to override it.',
+    cwe: 'CWE-74',
+  },
 ];
