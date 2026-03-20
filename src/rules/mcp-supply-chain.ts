@@ -155,11 +155,58 @@ const mcpEnvExposureRules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 5. Additional Supply Chain Risks
+// -------------------------------------------------------
+const mcpAdditionalRules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-unpinned-uvx',
+    severity: 'high',
+    description: 'MCP server launched via uvx without a pinned version — vulnerable to malicious updates',
+    pattern: /"command"\s*:\s*"uvx"\s*,\s*"args"\s*:\s*\[[^\]]*"(?!.*==)[a-z][a-z0-9_-]+"\s*(?:,|])/gi,
+    recommendation: 'Pin uvx MCP server versions: use "uvx" with "pkg==1.2.3" syntax. Unpinned uvx runs fetch the latest version and are vulnerable to supply chain attacks.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-github-raw-url',
+    severity: 'critical',
+    description: 'MCP server loaded from raw.githubusercontent.com or GitHub archive URL',
+    pattern: /"(?:command|args)"\s*:\s*(?:"[^"]*",\s*)?\[[^\]]*"(?:https?:\/\/raw\.githubusercontent\.com|https?:\/\/github\.com\/[^"]+\/(?:archive|raw)\/)[^"]+"/gi,
+    recommendation: 'Loading MCP servers from raw GitHub URLs bypasses integrity checks and can be updated without warning. Publish to a package registry and pin to a specific version + hash.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-database-url-env',
+    severity: 'critical',
+    description: 'Database connection string with credentials in MCP server env block',
+    pattern: /"env"\s*:\s*\{[^}]{0,500}"[^"]*(?:DATABASE_URL|DB_URL|MONGODB_URI|POSTGRES(?:_URL|SQL_URL)?|MYSQL_URL|REDIS_URL|MONGO_URI)[^"]*"\s*:\s*"(?:postgres|mysql|mongodb|redis|sqlite|mssql):\/\/[^@"]+:[^@"]+@[^"]+"/gi,
+    recommendation: 'Database URLs with embedded credentials in MCP configs expose your database to anyone reading the config file. Use env var references or a secrets manager at runtime.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-payment-api-key-env',
+    severity: 'critical',
+    description: 'Payment/communication API key (Stripe, Twilio, SendGrid) in MCP server env block',
+    pattern: /"env"\s*:\s*\{[^}]{0,500}"[^"]*(?:STRIPE_|TWILIO_|SENDGRID_|MAILGUN_)[^"]*"\s*:\s*"(?:sk_live_|sk_test_|AC[0-9a-f]{32}|SG\.[A-Za-z0-9_-]{22,})[^"]*"/gi,
+    recommendation: 'Payment and communication API keys in MCP configs can lead to unauthorized charges or data leaks. Inject credentials at runtime via environment variables.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-writable-host-mount',
+    severity: 'high',
+    description: 'MCP server container mounts a host directory in read-write mode (default or :rw)',
+    pattern: /"-v\s+[^"]+:[^":]+(?<!:ro)"/gi,
+    recommendation: 'Read-write host mounts in MCP containers allow the server to modify host files. Use :ro (read-only) mounts for data volumes, or named volumes for writable storage.',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
   ...mcpSandboxEscapeRules,
   ...mcpEnvExposureRules,
+  ...mcpAdditionalRules,
 ];
 
 // CommonJS compatibility

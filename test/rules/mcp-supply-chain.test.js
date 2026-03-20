@@ -221,3 +221,117 @@ describe('MCP Supply Chain Security Rules', () => {
     });
   });
 });
+
+// ----------------------------------------------------------------
+// Additional Rules (Issue #15 continuation)
+// ----------------------------------------------------------------
+
+describe('mcp-supply-chain-unpinned-uvx', () => {
+  it('flags uvx without version pin', () => {
+    testPattern('mcp-supply-chain-unpinned-uvx',
+      '"command": "uvx", "args": ["mcp-server-fetch", "--port", "3000"]', true);
+  });
+
+  it('flags uvx with bare package name', () => {
+    testPattern('mcp-supply-chain-unpinned-uvx',
+      '"command": "uvx", "args": ["some-mcp-tool"]', true);
+  });
+
+  it('does not flag uvx with pinned version', () => {
+    testPattern('mcp-supply-chain-unpinned-uvx',
+      '"command": "uvx", "args": ["mcp-server-fetch==1.2.3"]', false);
+  });
+
+  it('does not flag non-uvx commands', () => {
+    testPattern('mcp-supply-chain-unpinned-uvx',
+      '"command": "npx", "args": ["@modelcontextprotocol/server-filesystem"]', false);
+  });
+});
+
+describe('mcp-supply-chain-github-raw-url', () => {
+  it('flags raw.githubusercontent.com URL', () => {
+    testPattern('mcp-supply-chain-github-raw-url',
+      '"args": ["https://raw.githubusercontent.com/user/repo/main/server.js"]', true);
+  });
+
+  it('flags GitHub archive URL', () => {
+    testPattern('mcp-supply-chain-github-raw-url',
+      '"command": "node", "args": ["https://github.com/user/repo/raw/main/index.js"]', true);
+  });
+
+  it('does not flag published npm packages from GitHub releases', () => {
+    testPattern('mcp-supply-chain-github-raw-url',
+      '"command": "npx", "args": ["@modelcontextprotocol/server-github@1.0.0"]', false);
+  });
+
+  it('does not flag regular HTTPS server URLs', () => {
+    testPattern('mcp-supply-chain-github-raw-url',
+      '"url": "https://api.example.com/mcp"', false);
+  });
+});
+
+describe('mcp-supply-chain-database-url-env', () => {
+  it('flags PostgreSQL URL with credentials', () => {
+    testPattern('mcp-supply-chain-database-url-env',
+      '"env": { "DATABASE_URL": "postgres://admin:secret@localhost:5432/mydb" }', true);
+  });
+
+  it('flags MongoDB URI with credentials', () => {
+    testPattern('mcp-supply-chain-database-url-env',
+      '"env": { "MONGODB_URI": "mongodb://user:pass@cluster.mongodb.net/db" }', true);
+  });
+
+  it('flags Redis URL with credentials', () => {
+    testPattern('mcp-supply-chain-database-url-env',
+      '"env": { "REDIS_URL": "redis://user:secret@redis.example.com:6379" }', true);
+  });
+
+  it('does not flag DB URL without credentials', () => {
+    testPattern('mcp-supply-chain-database-url-env',
+      '"env": { "DATABASE_URL": "postgres://localhost:5432/mydb" }', false);
+  });
+
+  it('does not flag env vars referencing variable substitution', () => {
+    testPattern('mcp-supply-chain-database-url-env',
+      '"env": { "DB_HOST": "localhost", "DB_PORT": "5432" }', false);
+  });
+});
+
+describe('mcp-supply-chain-payment-api-key-env', () => {
+  it('flags Stripe live key in env', () => {
+    testPattern('mcp-supply-chain-payment-api-key-env',
+      '"env": { "STRIPE_SECRET_KEY": "sk_live_abc123xyz789longkey" }', true);
+  });
+
+  it('flags Stripe test key in env', () => {
+    testPattern('mcp-supply-chain-payment-api-key-env',
+      '"env": { "STRIPE_API_KEY": "sk_test_verylongkeystring123" }', true);
+  });
+
+  it('does not flag Stripe env var name without a real key value', () => {
+    testPattern('mcp-supply-chain-payment-api-key-env',
+      '"env": { "STRIPE_KEY": "${STRIPE_SECRET_KEY}" }', false);
+  });
+
+  it('does not flag unrelated env vars', () => {
+    testPattern('mcp-supply-chain-payment-api-key-env',
+      '"env": { "APP_ENV": "production", "PORT": "3000" }', false);
+  });
+});
+
+describe('mcp-supply-chain-writable-host-mount', () => {
+  it('flags host mount without :ro flag', () => {
+    testPattern('mcp-supply-chain-writable-host-mount',
+      '"args": ["-v /home/user/data:/data"]', true);
+  });
+
+  it('flags host mount with explicit :rw', () => {
+    testPattern('mcp-supply-chain-writable-host-mount',
+      '"args": ["-v /var/log:/logs:rw"]', true);
+  });
+
+  it('does not flag read-only host mounts', () => {
+    testPattern('mcp-supply-chain-writable-host-mount',
+      '"args": ["-v /home/user/config:/config:ro"]', false);
+  });
+});
