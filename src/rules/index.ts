@@ -32,6 +32,7 @@ import * as pickle from './pickle.js';
 import * as mcpDiscovery from './mcp-discovery.js';
 import * as mcpSupplyChain from './mcp-supply-chain.js';
 import * as mcpAuth from './mcp-auth.js';
+import * as mcpRatelimit from './mcp-ratelimit.js';
 import * as sandboxEscape from './sandbox-escape.js';
 import * as toolPoisoning from './tool-poisoning.js';
 import * as agentMemory from './agent-memory.js';
@@ -115,6 +116,7 @@ export const all = [
   ...mcpDiscovery.rules,
   ...mcpSupplyChain.rules,
   ...mcpAuth.rules,
+  ...mcpRatelimit.rules,
   ...sandboxEscape.rules,
   ...toolPoisoning.rules,
   ...agentMemory.rules,
