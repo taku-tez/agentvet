@@ -335,3 +335,73 @@ describe('mcp-supply-chain-writable-host-mount', () => {
       '"args": ["-v /home/user/config:/config:ro"]', false);
   });
 });
+
+// ── New rules batch 2 ────────────────────────────────────────────────────────
+
+describe('mcp-supply-chain-anthropic-key-env', () => {
+  it('flags sk-ant- key in env block', () => {
+    testPattern('mcp-supply-chain-anthropic-key-env',
+      '"env": { "ANTHROPIC_API_KEY": "sk-ant-api03-abcdefghijklmnopqrstuvwxyz123456" }', true);
+  });
+
+  it('does not flag env var referencing a variable', () => {
+    testPattern('mcp-supply-chain-anthropic-key-env',
+      '"env": { "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}" }', false);
+  });
+
+  it('does not flag unrelated env vars', () => {
+    testPattern('mcp-supply-chain-anthropic-key-env',
+      '"env": { "PORT": "8080", "NODE_ENV": "production" }', false);
+  });
+});
+
+describe('mcp-supply-chain-huggingface-token-env', () => {
+  it('flags hf_ token in env block', () => {
+    testPattern('mcp-supply-chain-huggingface-token-env',
+      '"env": { "HF_TOKEN": "hf_abcdefghijklmnopqrstuvwxyz1234" }', true);
+  });
+
+  it('does not flag hf_ token as variable reference', () => {
+    testPattern('mcp-supply-chain-huggingface-token-env',
+      '"env": { "HF_TOKEN": "${HF_TOKEN}" }', false);
+  });
+
+  it('does not flag unrelated vars', () => {
+    testPattern('mcp-supply-chain-huggingface-token-env',
+      '"env": { "MODEL_NAME": "llama-3-70b" }', false);
+  });
+});
+
+describe('mcp-supply-chain-curl-pipe-sh', () => {
+  it('flags curl piped to bash', () => {
+    testPattern('mcp-supply-chain-curl-pipe-sh',
+      'curl -fsSL https://install.example.com | bash', true);
+  });
+
+  it('flags wget piped to sh', () => {
+    testPattern('mcp-supply-chain-curl-pipe-sh',
+      'wget -O- https://raw.example.com/install.sh | sh', true);
+  });
+
+  it('does not flag curl to file (no pipe-to-shell)', () => {
+    testPattern('mcp-supply-chain-curl-pipe-sh',
+      'curl -fsSL https://example.com/file.tgz -o file.tgz', false);
+  });
+});
+
+describe('mcp-supply-chain-unverified-pip-install', () => {
+  it('flags pip install without version pin', () => {
+    testPattern('mcp-supply-chain-unverified-pip-install',
+      'pip install requests', true);
+  });
+
+  it('flags pip3 install without version pin', () => {
+    testPattern('mcp-supply-chain-unverified-pip-install',
+      'pip3 install flask', true);
+  });
+
+  it('does not flag pip install with version pin', () => {
+    testPattern('mcp-supply-chain-unverified-pip-install',
+      'pip install requests==2.31.0', false);
+  });
+});

@@ -201,12 +201,59 @@ const mcpAdditionalRules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 6. Additional MCP threat vectors (Issue #15 batch 2)
+// -------------------------------------------------------
+const mcpThreatVectorRules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-anthropic-key-env',
+    severity: 'critical',
+    description: 'Anthropic API key hardcoded in MCP server env block',
+    pattern: /"env"\s*:\s*\{[^}]{0,500}"[^"]*"\s*:\s*"sk-ant-[A-Za-z0-9_\-]{20,}[^"]*"/gi,
+    recommendation: 'Anthropic API keys in MCP config are readable by all processes. Use a secrets manager (HashiCorp Vault, AWS Secrets Manager) or environment-level injection instead.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-huggingface-token-env',
+    severity: 'high',
+    description: 'HuggingFace token hardcoded in MCP server env block',
+    pattern: /"env"\s*:\s*\{[^}]{0,500}"[^"]*"\s*:\s*"hf_[A-Za-z0-9]{20,}[^"]*"/gi,
+    recommendation: 'HuggingFace tokens in MCP config expose model access credentials. Use the HuggingFace CLI token store (~/.cache/huggingface/token) and reference it via $HF_TOKEN at runtime.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-curl-pipe-sh',
+    severity: 'critical',
+    description: 'MCP server startup command pipes curl/wget output directly to shell',
+    pattern: /(?:curl|wget)[^|"]+\|\s*(?:bash|sh|zsh|fish)/gi,
+    recommendation: 'Piping remote script content directly to a shell is a common supply chain attack vector. Download the script first, verify its hash, then execute it.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-unverified-pip-install',
+    severity: 'high',
+    description: 'MCP server startup installs pip packages without version pinning',
+    pattern: /(?:pip|pip3)\s+install\s+(?!.*==)[a-zA-Z0-9_\-]+(?:\s|$)/gi,
+    recommendation: 'Unpinned pip packages in MCP server startup commands can be silently replaced with malicious versions. Pin all packages: pip install package==1.2.3',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-env-passthrough-all',
+    severity: 'high',
+    description: 'MCP server config passes all environment variables (env: {}) with no restriction',
+    pattern: /"env"\s*:\s*\{\s*"[^"]+"\s*:\s*"\$\{[A-Z_]+\}"\s*,\s*"[^"]+"\s*:\s*"\$\{[A-Z_]+\}"\s*,\s*"[^"]+"\s*:\s*"\$\{[A-Z_]+\}"/gi,
+    recommendation: 'Passing many env vars to MCP servers increases the attack surface. Only pass the specific variables each server needs.',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
   ...mcpSandboxEscapeRules,
   ...mcpEnvExposureRules,
   ...mcpAdditionalRules,
+  ...mcpThreatVectorRules,
 ];
 
 // CommonJS compatibility
