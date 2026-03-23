@@ -44,6 +44,7 @@ import * as contextWindowPoisoning from './context-window-poisoning.js';
 import * as pathTraversal from './path-traversal.js';
 import * as agenticLoop from './agentic-loop.js';
 import * as insecureLlmEndpoint from './insecure-llm-endpoint.js';
+import * as unsafeOutput from './unsafe-output.js';
 
 export {
   credentials,
@@ -83,6 +84,7 @@ export {
   contextWindowPoisoning,
   agenticLoop,
   insecureLlmEndpoint,
+  unsafeOutput,
 };
 
 // Combined rules array
@@ -128,6 +130,7 @@ export const all = [
   ...pathTraversal.rules,
   ...agenticLoop.rules,
   ...insecureLlmEndpoint.rules,
+  ...unsafeOutput.rules,
 ];
 
 // CommonJS compatibility
@@ -170,5 +173,6 @@ module.exports = {
   pathTraversal,
   agenticLoop,
   insecureLlmEndpoint,
+  unsafeOutput,
   all,
 };
