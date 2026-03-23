@@ -247,6 +247,36 @@ const mcpThreatVectorRules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 7. Batch 3: hardcoded secrets & filesystem scope (Issue #15)
+// -------------------------------------------------------
+const mcpBatch3Rules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-database-uri-env',
+    severity: 'critical',
+    description: 'Database connection URI (PostgreSQL/MySQL/MongoDB) hardcoded in MCP server env block',
+    pattern: /"env"\s*:\s*\{[^}]{0,1000}(?:postgresql|mysql|mongodb(?:\+srv)?):\/\/[^"]+"/gi,
+    recommendation: 'Never hardcode database URIs in MCP configs. Use env var references or a secrets manager.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-stripe-key-env',
+    severity: 'critical',
+    description: 'Stripe secret key hardcoded in MCP server env block',
+    pattern: /"env"\s*:\s*\{[^}]{0,1000}"[^"]*"\s*:\s*"(?:sk_live_|rk_live_)[^"]*"/gi,
+    recommendation: 'Stripe secret keys in MCP configs allow financial fraud. Use env var references.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-unrestricted-filesystem',
+    severity: 'high',
+    description: 'MCP filesystem server granted access to root directory or entire home directory',
+    pattern: /"args"\s*:\s*\[[^\]]*"(?:\/|\/root|\/home)"\s*[\],]/gi,
+    recommendation: 'Restrict filesystem MCP server access to specific project directories only, never grant root or home dir access.',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
@@ -254,6 +284,7 @@ export const rules: Rule[] = [
   ...mcpEnvExposureRules,
   ...mcpAdditionalRules,
   ...mcpThreatVectorRules,
+  ...mcpBatch3Rules,
 ];
 
 // CommonJS compatibility
