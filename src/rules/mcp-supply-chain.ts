@@ -324,6 +324,53 @@ const mcpBatch4Rules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 9. Batch 5: prompt injection via tool descriptions, version pinning,
+//    credential cache exposure, cross-agent exfiltration, Docker socket
+// -------------------------------------------------------
+const mcpBatch5Rules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-tool-description-injection',
+    severity: 'critical',
+    description: 'MCP server tool description contains prompt injection payload targeting the LLM',
+    pattern: /"description"\s*:\s*"[^"]{0,500}(?:ignore previous instructions|ignore all prior|you are now|disregard your|forget your previous|SYSTEM:|<\|system\|>|<\|im_start\|>)[^"]*"/gi,
+    recommendation: 'MCP tool descriptions are passed directly to the LLM context. Malicious servers can inject prompt override instructions. Validate and sandbox MCP server descriptions before use.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-no-version-pin',
+    severity: 'high',
+    description: 'MCP server package referenced without version pinning (@latest)',
+    pattern: /"args"\s*:\s*\[[^\]]*"[a-z0-9@][a-z0-9._\-/]*@latest"[^\]]*\]/gi,
+    recommendation: 'Using @latest for MCP server packages allows silent upgrades to malicious versions. Pin to exact versions: package@1.2.3',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-credential-cache-path',
+    severity: 'high',
+    description: 'MCP server environment references a credential cache path',
+    pattern: /"env"\s*:\s*\{[^}]{0,1000}"[^"]*(?:CREDENTIAL_CACHE|TOKEN_CACHE|AUTH_CACHE|SESSION_CACHE)[^"]*"\s*:\s*"[^"]+"/gi,
+    recommendation: 'Credential cache paths exposed to MCP servers can be read by malicious server code. Use OS keychain APIs or ephemeral credential providers instead.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-cross-agent-exfil',
+    severity: 'critical',
+    description: 'MCP server configuration includes an outbound webhook/callback URL that may enable data exfiltration',
+    pattern: /"env"\s*:\s*\{[^}]{0,1000}"[^"]*(?:WEBHOOK_URL|CALLBACK_URL|EXFIL_URL|REPORT_URL|NOTIFY_URL)[^"]*"\s*:\s*"https?:\/\/(?!localhost|127\.0\.0\.1)[^"]+"/gi,
+    recommendation: 'MCP servers with outbound webhook/callback URLs configured via env can silently exfiltrate conversation data. Audit all external URLs in MCP server configurations.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-docker-socket-mount',
+    severity: 'critical',
+    description: 'MCP server mounts the Docker socket, granting container escape capability',
+    pattern: /"args"\s*:\s*\[[^\]]*"[^"]*(?:\/var\/run\/docker\.sock|\/run\/docker\.sock)[^"]*"/gi,
+    recommendation: 'Mounting the Docker socket inside an MCP server container grants root-equivalent access to the host. Never pass docker.sock to untrusted MCP servers.',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
@@ -333,6 +380,7 @@ export const rules: Rule[] = [
   ...mcpThreatVectorRules,
   ...mcpBatch3Rules,
   ...mcpBatch4Rules,
+  ...mcpBatch5Rules,
 ];
 
 // CommonJS compatibility
