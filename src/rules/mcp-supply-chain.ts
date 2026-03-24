@@ -277,6 +277,53 @@ const mcpBatch3Rules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 8. Batch 4: typosquatting, GitHub Actions OIDC leakage,
+//    MCP server impersonation, and stale/abandoned servers
+// -------------------------------------------------------
+const mcpBatch4Rules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-typosquat-uvx',
+    severity: 'high',
+    description: 'UVX/NPX command targets a package name resembling a known tool (possible typosquatting)',
+    pattern: /"command"\s*:\s*"(?:uvx|npx)"[^}]{0,500}"args"\s*:\s*\[\s*"(?:mcp[-_]?serv(?:er)?s?|mcp[-_]?tools?|mcp[-_]?utils?|mcpserver|mcptools?)[^"]*"/gi,
+    recommendation: 'Generic or suspiciously named MCP packages (e.g. mcp-server, mcp-tools) may be typosquats. Verify the exact package name and maintainer on npmjs.com or PyPI before use.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-github-actions-oidc-env',
+    severity: 'critical',
+    description: 'GitHub Actions OIDC token or Actions environment variable passed to MCP server',
+    pattern: /"env"\s*:\s*\{[^}]{0,1000}(?:ACTIONS_ID_TOKEN_REQUEST_(?:TOKEN|URL)|GITHUB_TOKEN|ACTIONS_RUNTIME_TOKEN)/gi,
+    recommendation: 'GitHub Actions tokens (GITHUB_TOKEN, ACTIONS_RUNTIME_TOKEN, OIDC tokens) must never be passed to MCP servers. This exposes CI/CD credentials to third-party code execution.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-aws-session-token-env',
+    severity: 'critical',
+    description: 'AWS temporary session token (STS) hardcoded or referenced in MCP server env block',
+    pattern: /"env"\s*:\s*\{[^}]{0,1000}"[^"]*(?:AWS_SESSION_TOKEN|AWS_SECURITY_TOKEN)[^"]*"\s*:\s*"[^$][^"]{8,}"/gi,
+    recommendation: 'AWS session tokens expire but granting them to MCP servers creates a lateral movement path. Use IAM role assumptions with minimal scope instead.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-npx-no-yes-flag',
+    severity: 'medium',
+    description: 'NPX command used in MCP server without --yes flag, allowing interactive prompts to be bypassed by malicious scripts',
+    pattern: /"command"\s*:\s*"npx"(?:(?!"--yes"|"-y").){0,500}"args"\s*:\s*\[/gis,
+    recommendation: 'Use npx with --yes to prevent malicious packages from injecting interactive prompts that execute arbitrary code during installation.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-localhost-non-standard-port',
+    severity: 'medium',
+    description: 'MCP server configured to connect to localhost on a non-standard high port (potential port hijacking)',
+    pattern: /"url"\s*:\s*"https?:\/\/(?:localhost|127\.0\.0\.1):(?:[3-9][0-9]{3,4}|[1-5][0-9]{4}|6[0-4][0-9]{3})\/"/gi,
+    recommendation: 'Connecting to localhost on high ports may allow other processes on the machine to impersonate the MCP server. Use Unix sockets or validate the server process identity.',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
@@ -285,6 +332,7 @@ export const rules: Rule[] = [
   ...mcpAdditionalRules,
   ...mcpThreatVectorRules,
   ...mcpBatch3Rules,
+  ...mcpBatch4Rules,
 ];
 
 // CommonJS compatibility
