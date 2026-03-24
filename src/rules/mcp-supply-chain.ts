@@ -515,6 +515,55 @@ const mcpBatch8Rules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 13. Batch 9: MCP server using eval/dynamic code, insecure
+//     deserialization in tool args, TOCTOU race in file ops,
+//     excessively long tool descriptions (token stuffing),
+//     and missing server authentication
+// -------------------------------------------------------
+const mcpBatch9Rules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-eval-in-tool-name',
+    severity: 'critical',
+    description: 'MCP tool name contains code execution patterns suggesting eval injection',
+    pattern: /"(?:tool|toolName|function_name)"\s*:\s*"[^"]*(?:eval\(|exec\(|__import__|subprocess\.|os\.system|process\.exec|child_process)[^"]*"/gi,
+    recommendation: 'MCP tool names containing eval, exec or system call patterns indicate active exploitation attempts. Reject any tool calls with names containing code execution syntax.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-insecure-deserialization',
+    severity: 'critical',
+    description: 'MCP tool argument contains serialized object payload that may trigger insecure deserialization',
+    pattern: /"(?:data|payload|body|input)"\s*:\s*"(?:rO0AB|H4sI|eyJ[a-zA-Z0-9+/]{20,}={0,2}|O:8:\"stdClass|a:[0-9]+:\{i:[0-9]+|Tzo[0-9]+|ACED0005)[^"]*"/gi,
+    recommendation: 'Base64-encoded Java serialized objects (rO0AB), PHP serialized arrays, or Python pickle data in MCP tool arguments indicate deserialization attacks. Never deserialize untrusted data from tool inputs.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-token-stuffing',
+    severity: 'medium',
+    description: 'MCP tool description is excessively long (>2000 chars), possibly used for token stuffing to manipulate LLM context',
+    pattern: /"description"\s*:\s*"[^"]{2000,}"/gi,
+    recommendation: 'MCP tool descriptions exceeding 2000 characters consume excessive LLM context tokens and may be used to push important instructions out of the context window. Enforce maximum description lengths.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-no-auth-required',
+    severity: 'high',
+    description: 'MCP server configured with authentication explicitly disabled',
+    pattern: /"(?:auth|authentication|requireAuth|authRequired)"\s*:\s*(?:false|null|0|"none"|"disabled"|"off")/gi,
+    recommendation: 'MCP servers with authentication disabled can be accessed by any local or network process. Always require authentication for MCP server connections, especially for servers with file system or network access.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-world-readable-config',
+    severity: 'high',
+    description: 'MCP configuration file permissions allow world-readable access',
+    pattern: /"(?:permissions|fileMode|chmod|mode)"\s*:\s*"(?:0?644|0?664|0?666|0?777|a\+r|world-readable|public)"/gi,
+    recommendation: 'MCP configuration files with world-readable permissions expose API keys and server credentials to all local users. Set permissions to 0600 (owner read/write only).',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
@@ -528,6 +577,7 @@ export const rules: Rule[] = [
   ...mcpBatch6Rules,
   ...mcpBatch7Rules,
   ...mcpBatch8Rules,
+  ...mcpBatch9Rules,
 ];
 
 // CommonJS compatibility
