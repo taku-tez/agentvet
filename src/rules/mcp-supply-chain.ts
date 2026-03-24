@@ -564,6 +564,54 @@ const mcpBatch9Rules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 14. Batch 10: MCP server auto-approval bypass, race condition
+//     in tool execution, supply chain checksum bypass,
+//     malicious update endpoint, and cross-origin tool access
+// -------------------------------------------------------
+const mcpBatch10Rules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-auto-approval-bypass',
+    severity: 'critical',
+    description: 'MCP server configuration sets auto-approval for all tool calls, bypassing human-in-the-loop controls',
+    pattern: /"(?:autoApprove|autoApproveAll|alwaysAllow|skipConfirmation|bypassApproval)"\s*:\s*(?:true|\["?\*"?\])/gi,
+    recommendation: 'Auto-approving all MCP tool calls removes the human oversight layer and allows any tool, including destructive ones, to execute without confirmation. Never use wildcard auto-approval in production.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-no-checksum-verification',
+    severity: 'high',
+    description: 'MCP server package installed without integrity checksum verification',
+    pattern: /"(?:integrity|checksum|hash|sha256|sha512)"\s*:\s*(?:null|false|""|"none"|"skip")/gi,
+    recommendation: 'Disabling integrity checking for MCP server packages allows tampered packages to execute. Always verify package checksums using npm integrity fields or external SRI hashes.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-malicious-update-url',
+    severity: 'critical',
+    description: 'MCP server configured with an update endpoint that could deliver malicious updates',
+    pattern: /"(?:updateUrl|updateEndpoint|autoUpdateUrl|upgradeUrl)"\s*:\s*"https?:\/\/(?!(?:registry\.npmjs\.org|registry\.yarnpkg\.com|npm\.pkg\.github\.com|update\.code\.visualstudio\.com))[^"]+"/gi,
+    recommendation: 'MCP servers with custom update URLs can deliver malicious code updates silently. Only allow updates from official package registries or verified distribution channels.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-cross-origin-tool-access',
+    severity: 'high',
+    description: 'MCP server CORS configuration allows cross-origin tool access from any origin',
+    pattern: /"(?:cors|allowedOrigins|corsOrigins|accessControlAllowOrigin)"\s*:\s*(?:"\*"|\["?\*"?\]|true)/gi,
+    recommendation: 'Wildcard CORS on MCP servers allows any web page to invoke tools on behalf of the authenticated user. Restrict CORS to specific trusted origins.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-timeout-disabled',
+    severity: 'medium',
+    description: 'MCP tool execution timeout explicitly set to zero or disabled',
+    pattern: /"(?:timeout|requestTimeout|toolTimeout|executionTimeout)"\s*:\s*(?:0|-1|null|false|"none"|"infinite"|"unlimited")/gi,
+    recommendation: 'Disabling execution timeouts for MCP tool calls allows resource exhaustion attacks and persistent code execution. Set reasonable timeout values for all tool calls.',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
@@ -578,6 +626,7 @@ export const rules: Rule[] = [
   ...mcpBatch7Rules,
   ...mcpBatch8Rules,
   ...mcpBatch9Rules,
+  ...mcpBatch10Rules,
 ];
 
 // CommonJS compatibility
