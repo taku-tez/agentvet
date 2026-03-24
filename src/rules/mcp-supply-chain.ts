@@ -467,6 +467,54 @@ const mcpBatch7Rules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 12. Batch 8: MCP server side-channel via timing, insecure
+//     inter-process communication, tool call spoofing,
+//     secrets in server name/description, and SSRF via tool args
+// -------------------------------------------------------
+const mcpBatch8Rules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-secret-in-server-name',
+    severity: 'high',
+    description: 'MCP server name or description contains what appears to be a secret or token value',
+    pattern: /"(?:name|description|serverName)"\s*:\s*"[^"]{0,200}(?:sk-[a-zA-Z0-9_\-]{20,}|ghp_[a-zA-Z0-9]{36}|xoxb-[0-9]+-[a-zA-Z0-9]+|AKIA[A-Z0-9]{16})[^"]*"/gi,
+    recommendation: 'API keys or tokens embedded in MCP server names or descriptions are logged and may be exposed in configuration files. Never include secrets in human-readable metadata fields.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-ssrf-via-tool-arg',
+    severity: 'critical',
+    description: 'MCP tool argument passes a user-controlled URL to a server-side fetch operation without validation',
+    pattern: /"(?:url|endpoint|webhook|target|destination|fetch_url|request_url)"\s*:\s*"https?:\/\/(?:169\.254\.169\.254|metadata\.google\.internal|100\.100\.100\.200|fd00:|::1)[^"]*"/gi,
+    recommendation: 'MCP tool arguments containing cloud metadata endpoint URLs (169.254.169.254, metadata.google.internal) indicate SSRF attempts targeting cloud provider credentials. Block requests to link-local and metadata endpoints.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-tool-call-spoofing',
+    severity: 'critical',
+    description: 'MCP tool call contains a mismatched tool name suggesting spoofing of a different tool',
+    pattern: /"tool"\s*:\s*"[^"]+"\s*,\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{[^}]*"tool"\s*:\s*"[^"]+"/gi,
+    recommendation: 'Nested tool name overrides in MCP tool call payloads may allow a malicious server to spoof calls to a different tool. Validate that the tool name in arguments matches the declared tool call.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-ipc-socket-exposure',
+    severity: 'high',
+    description: 'MCP server configured to expose a Unix domain socket accessible to all users',
+    pattern: /"(?:socket|socketPath|ipcPath|pipe)"\s*:\s*"\/tmp\/[^"]+"/gi,
+    recommendation: 'MCP servers using world-accessible Unix sockets in /tmp can be hijacked by other local processes. Use named sockets in restricted directories with proper permissions.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-debug-mode-enabled',
+    severity: 'medium',
+    description: 'MCP server started with debug or verbose logging mode that may expose secrets in logs',
+    pattern: /"(?:args|command)"\s*:\s*(?:"[^"]*--(?:debug|verbose|trace|log-level=debug|log-level=trace)[^"]*"|(?:\[[^\]]*"--(?:debug|verbose|trace)")[^]*\])/gi,
+    recommendation: 'Running MCP servers in debug mode logs all tool inputs and outputs including secrets. Disable debug logging in production to prevent credential exposure in log files.',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
@@ -479,6 +527,7 @@ export const rules: Rule[] = [
   ...mcpBatch5Rules,
   ...mcpBatch6Rules,
   ...mcpBatch7Rules,
+  ...mcpBatch8Rules,
 ];
 
 // CommonJS compatibility
