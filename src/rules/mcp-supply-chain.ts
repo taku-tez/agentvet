@@ -371,6 +371,54 @@ const mcpBatch5Rules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 10. Batch 6: MCP config file path traversal, insecure transport,
+//     wildcard permissions, reflective prompt via tool results,
+//     and MCP server impersonating a built-in tool
+// -------------------------------------------------------
+const mcpBatch6Rules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-config-path-traversal',
+    severity: 'high',
+    description: 'MCP server args contain a path traversal sequence that may access files outside intended directories',
+    pattern: /"args"\s*:\s*\[[^\]]*"[^"]*(?:\.\.\/|\.\.\\\\|%2e%2e%2f|%2e%2e%5c)[^"]*"/gi,
+    recommendation: 'Path traversal sequences (../) in MCP server arguments can allow access to files outside the intended working directory. Sanitize all file paths passed to MCP servers.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-insecure-http-url',
+    severity: 'medium',
+    description: 'MCP server configured to connect over plain HTTP (not HTTPS)',
+    pattern: /"url"\s*:\s*"http:\/\/(?!localhost|127\.0\.0\.1)[^"]+"/gi,
+    recommendation: 'MCP servers connected over plain HTTP expose authentication tokens and conversation data to network eavesdroppers. Always use HTTPS for remote MCP server connections.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-wildcard-tool-permissions',
+    severity: 'high',
+    description: 'MCP server granted wildcard (*) tool permissions allowing access to all tools',
+    pattern: /"(?:allowedTools|permissions|tools)"\s*:\s*\[\s*"\*"\s*\]/gi,
+    recommendation: 'Granting wildcard (*) tool permissions to MCP servers violates the principle of least privilege. Explicitly list only the tools each server needs.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-reflective-prompt-result',
+    severity: 'critical',
+    description: 'MCP tool result field contains a prompt injection payload targeting the host LLM',
+    pattern: /"(?:result|content|text|output)"\s*:\s*"[^"]{0,500}(?:ignore previous|disregard all|you are now|new system prompt|<\|system\|>|OVERRIDE:)[^"]*"/gi,
+    recommendation: 'MCP tool results are fed back into the LLM context. A malicious MCP server can return prompt injection payloads in tool results. Sanitize and validate all tool outputs before inclusion in the context.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-impersonating-builtin',
+    severity: 'critical',
+    description: 'MCP server name matches a common built-in tool name, potentially impersonating it',
+    pattern: /"(?:name|serverName|id)"\s*:\s*"(?:filesystem|browser|computer|bash|shell|python|code_interpreter|web_search|calculator|calendar|email|todo|notes|memory)[^"]*"/gi,
+    recommendation: 'MCP servers with names identical to common built-in tool names (filesystem, browser, bash, etc.) may be impersonating trusted tools. Verify the server origin and use distinct, namespace-prefixed names.',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
@@ -381,6 +429,7 @@ export const rules: Rule[] = [
   ...mcpBatch3Rules,
   ...mcpBatch4Rules,
   ...mcpBatch5Rules,
+  ...mcpBatch6Rules,
 ];
 
 // CommonJS compatibility
