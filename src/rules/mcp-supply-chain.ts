@@ -419,6 +419,54 @@ const mcpBatch6Rules: Rule[] = [
   },
 ];
 
+// -------------------------------------------------------
+// 11. Batch 7: MCP server requesting excessive scopes,
+//     persistent storage abuse, inter-agent message tampering,
+//     unvalidated redirect, and shadow MCP registry
+// -------------------------------------------------------
+const mcpBatch7Rules: Rule[] = [
+  {
+    id: 'mcp-supply-chain-excessive-scopes',
+    severity: 'high',
+    description: 'MCP server requests excessive OAuth or permission scopes beyond what the tool description indicates',
+    pattern: /"scopes?"\s*:\s*\[[^\]]*"(?:admin|root|superuser|write:all|read:all|\*:[^"]*|[^"]*:admin)"/gi,
+    recommendation: 'MCP servers requesting admin/wildcard OAuth scopes can access far more data than their stated purpose. Audit all scope requests and apply the principle of least privilege.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-persistent-storage-abuse',
+    severity: 'high',
+    description: 'MCP server configured with write access to a persistent database or key-value store that persists across sessions',
+    pattern: /"env"\s*:\s*\{[^}]{0,1000}"[^"]*(?:REDIS_URL|MONGODB_URL|POSTGRES_URL|DATABASE_URL|KV_URL|STORAGE_URL)[^"]*"\s*:\s*"[^$][^"]{5,}"/gi,
+    recommendation: 'MCP servers with direct database write access can persist malicious data across sessions or exfiltrate conversation history. Use read-only connections or ephemeral storage for MCP server data access.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-inter-agent-tampering',
+    severity: 'critical',
+    description: 'MCP tool result contains instructions to modify another agent\'s memory or context',
+    pattern: /"(?:result|content|text)"\s*:\s*"[^"]{0,500}(?:update your memory|add to your context|remember that|store this fact|your new instruction|set your system prompt)[^"]*"/gi,
+    recommendation: 'MCP tool results containing instructions to update agent memory or context can perform persistent prompt injection. Treat all tool results as untrusted data, not instructions.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-unvalidated-redirect',
+    severity: 'medium',
+    description: 'MCP server configuration contains an OAuth redirect URI that accepts arbitrary domains',
+    pattern: /"(?:redirect_uri|redirectUri|callback_url)"\s*:\s*"https?:\/\/[^"]*(?:\*\.|localhost|0\.0\.0\.0)[^"]*"/gi,
+    recommendation: 'Wildcard or open redirect URIs in MCP OAuth configuration allow authorization code interception. Use exact redirect URIs matching production endpoints only.',
+    category: 'mcp-supply-chain',
+  },
+  {
+    id: 'mcp-supply-chain-shadow-registry',
+    severity: 'high',
+    description: 'MCP server package fetched from a non-standard or shadow registry URL',
+    pattern: /"(?:registry|registryUrl|npm_config_registry)"\s*:\s*"https?:\/\/(?!registry\.npmjs\.org|registry\.yarnpkg\.com|npm\.pkg\.github\.com)[^"]+"/gi,
+    recommendation: 'Fetching MCP server packages from non-standard registries bypasses npm security scanning and can deliver malicious packages. Use only official registries (npmjs.org, GitHub Packages).',
+    category: 'mcp-supply-chain',
+  },
+];
+
 export const rules: Rule[] = [
   ...mcpConfigSecretRules,
   ...mcpUntrustedServerRules,
@@ -430,6 +478,7 @@ export const rules: Rule[] = [
   ...mcpBatch4Rules,
   ...mcpBatch5Rules,
   ...mcpBatch6Rules,
+  ...mcpBatch7Rules,
 ];
 
 // CommonJS compatibility
