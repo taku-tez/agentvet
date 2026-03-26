@@ -265,4 +265,68 @@ describe('Computer Use Attack Detection Rules', () => {
     });
   });
 
+  // ============================================
+  // VPN Credential Harvesting
+  // ============================================
+  describe('computer-use-vpn-credential-harvest', () => {
+    test('should detect reading OpenVPN config', () => {
+      testRule('computer-use-vpn-credential-harvest',
+        'cat /etc/openvpn/client.conf',
+        true);
+    });
+
+    test('should detect reading VPN config directory', () => {
+      testRule('computer-use-vpn-credential-harvest',
+        'open /etc/vpn/settings.conf',
+        true);
+    });
+
+    test('should detect clicking AnyConnect password field', () => {
+      testRule('computer-use-vpn-credential-harvest',
+        'click on anyconnect password field and type_text the credential',
+        true);
+    });
+
+    test('should not flag unrelated file reads', () => {
+      testRule('computer-use-vpn-credential-harvest',
+        'cat /etc/nginx/nginx.conf',
+        false);
+    });
+  });
+
+  // ============================================
+  // Password Manager Access
+  // ============================================
+  describe('computer-use-password-manager-access', () => {
+    test('should detect 1Password interaction', () => {
+      testRule('computer-use-password-manager-access',
+        'click on 1password unlock button',
+        true);
+    });
+
+    test('should detect Bitwarden interaction', () => {
+      testRule('computer-use-password-manager-access',
+        'screenshot bitwarden vault to extract credentials',
+        true);
+    });
+
+    test('should detect KeePass interaction', () => {
+      testRule('computer-use-password-manager-access',
+        'computer_use open keepass database',
+        true);
+    });
+
+    test('should detect master password input', () => {
+      testRule('computer-use-password-manager-access',
+        'type_text master password into vault unlock dialog',
+        true);
+    });
+
+    test('should not flag unrelated UI interaction', () => {
+      testRule('computer-use-password-manager-access',
+        'click on submit button in the form',
+        false);
+    });
+  });
+
 });

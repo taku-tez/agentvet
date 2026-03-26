@@ -159,6 +159,32 @@ export const rules: Rule[] = [
     category: 'computer-use',
     cwe: 'CWE-200',
   },
+
+  // ============================================
+  // VPN Credential Harvesting via Computer Use
+  // ============================================
+  {
+    id: 'computer-use-vpn-credential-harvest',
+    severity: 'critical',
+    description: 'Computer Use accessing VPN configuration files or VPN client UI — potential credential harvesting',
+    pattern: /(?:(?:cat|type|Get-Content|open|read)\s+['""`]?(?:\/etc\/(?:vpn|openvpn|wireguard|ipsec)|~\/\.(?:vpn|openvpn|wireguard)|%APPDATA%\\(?:OpenVPN|AnyConnect)|\/Library\/Application Support\/(?:Cisco|FortiClient))[^\s'""`]*|(?:click|type_text|keyboard_input|pyautogui\.(?:click|write|hotkey))[^\n]*(?:vpn|anyconnect|forticlient|wireguard|openvpn|globalprotect).*(?:password|passphrase|secret|key|credential|token))/gi,
+    recommendation: 'CRITICAL: Computer Use appears to be accessing VPN configuration or credentials. VPN configs often contain pre-shared keys, certificates, and user credentials. Restrict Computer Use access to VPN client applications.',
+    category: 'computer-use',
+    cwe: 'CWE-522',
+  },
+
+  // ============================================
+  // Password Manager Access via Computer Use
+  // ============================================
+  {
+    id: 'computer-use-password-manager-access',
+    severity: 'critical',
+    description: 'Computer Use interacting with password manager UI (1Password, Bitwarden, KeePass, etc.) — potential bulk credential exfiltration',
+    pattern: /(?:click|type_text|keyboard_input|screenshot|computer_use|pyautogui)[^\n]*(?:1password|bitwarden|keepass|dashlane|lastpass|keychain|credential vault|password manager|secrets manager|vault unlock|master password)/gi,
+    recommendation: 'CRITICAL: Computer Use is interacting with a password manager. This can enable bulk credential extraction. Never allow untrusted Computer Use agents to access password manager applications.',
+    category: 'computer-use',
+    cwe: 'CWE-522',
+  },
 ];
 
 // CommonJS compatibility
