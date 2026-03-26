@@ -48,7 +48,7 @@ export const rules: Rule[] = [
     id: 'agent-memory-raw-llm-response',
     severity: 'high',
     description: 'Raw LLM response stored directly in agent memory without sanitization (self-reinforcing hallucination/injection risk)',
-    pattern: /(?:memory|mem|longterm|recall_store)\s*\.\s*(?:add|store|save|remember|set)\s*\(\s*(?:llm|ai|model|completion|response|assistant|chatResponse|llmResponse|modelResponse|output)\s*(?:\.\s*(?:content|text|output|choices\[0\]|message\b|\w+))*\s*[,)]/gi,
+    pattern: /(?:memory|mem|longterm|recall_store)\s*\.\s*(?:add|store|save|remember|set)\s*\(\s*(?:llm|ai|model|completion|response|assistant|chatResponse|llmResponse|modelResponse|llm_response|model_output|ai_response|completion_text|output)\s*(?:\.\s*(?:content|text|output|choices\[0\]|message\b|\w+))*\s*[,)]/gi,
     recommendation: 'Validate LLM responses before persisting to memory. Check for self-referential instructions or injected directives that could corrupt future context.',
     cwe: 'CWE-74',
   },
@@ -121,6 +121,26 @@ export const rules: Rule[] = [
     pattern: /(?:memory|mem|recall_store)\s*\.\s*(?:add|save|store|remember)\s*\(\s*(?:tool_?result|tool_?output|tool_?response|function_?result|function_?output|action_?result|action_?output)\s*(?:\[\s*['"](?:content|output|result|text)['"]\s*\]|\.\s*(?:content|output|result|text))?\s*[,)]/gi,
     recommendation: 'Sanitize tool outputs before writing to agent memory. Treat tool results as untrusted external data — apply the same injection filters used for user input.',
     cwe: 'CWE-74',
+  },
+
+  // ── Memory reflection loop (read-then-write without sanitization) ─
+  {
+    id: 'agent-memory-reflection-loop',
+    severity: 'high',
+    description: 'Agent reads from memory and writes the (possibly poisoned) result back to memory without sanitization — amplifies memory poisoning',
+    pattern: /(?:memory|mem|recall_store|long_?term)\s*\.\s*(?:add|save|store|remember|update|set|write)\s*\([^)]*(?:memory|mem|recall_store|long_?term)\s*\.\s*(?:get|read|recall|retrieve|load|search|query)\s*\([^)]*\)[^)]*\)/gi,
+    recommendation: 'When using retrieved memories as input for new memories (reflection/consolidation), apply sanitization and validation between retrieval and storage to prevent iterative memory poisoning.',
+    cwe: 'CWE-74',
+  },
+
+  // ── Cross-session memory leak (no user/session scoping on retrieval) ─
+  {
+    id: 'agent-memory-cross-session-leak',
+    severity: 'critical',
+    description: 'Agent memory retrieval without user_id/session_id scope filter — risks leaking memories across users',
+    pattern: /(?:memory|mem|recall_store|vector_?store|vector_?db|chroma|pinecone|weaviate|qdrant)\s*\.\s*(?:similarity_search|search|query|retrieve|recall|get_relevant)\s*\(\s*[^)]*\)/gi,
+    recommendation: 'Always scope memory retrieval queries with user_id or session_id filters. Example: memory.search(query, filter={"user_id": user_id}). Without scoping, one user\'s memories may surface in another\'s context.',
+    cwe: 'CWE-200',
   },
 
 ];
