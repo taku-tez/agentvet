@@ -45,6 +45,7 @@ import * as pathTraversal from './path-traversal.js';
 import * as agenticLoop from './agentic-loop.js';
 import * as insecureLlmEndpoint from './insecure-llm-endpoint.js';
 import * as unsafeOutput from './unsafe-output.js';
+import * as resourceExhaustion from './resource-exhaustion.js';
 
 export {
   credentials,
@@ -131,6 +132,7 @@ export const all = [
   ...agenticLoop.rules,
   ...insecureLlmEndpoint.rules,
   ...unsafeOutput.rules,
+  ...resourceExhaustion.rules,
 ];
 
 // CommonJS compatibility
@@ -174,5 +176,6 @@ module.exports = {
   agenticLoop,
   insecureLlmEndpoint,
   unsafeOutput,
+  resourceExhaustion,
   all,
 };
