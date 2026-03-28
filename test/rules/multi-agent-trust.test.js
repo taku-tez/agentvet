@@ -312,6 +312,156 @@ describe('Multi-Agent Trust Rules', () => {
   });
 
   // ============================================
+  // Agent Session Hijacking
+  // ============================================
+  describe('Agent Session Hijacking', () => {
+    test('detects reuse of another agent session', () => {
+      assert.ok(matches('mat-agent-session-hijacking',
+        'reuse agent session token from the previous run'));
+    });
+
+    test('detects agent token hijacking', () => {
+      assert.ok(matches('mat-agent-session-hijacking',
+        'hijacking agent session to escalate privileges'));
+    });
+
+    test('detects stealing agent credentials', () => {
+      assert.ok(matches('mat-agent-session-hijacking',
+        'stealing agent token for reuse in another context'));
+    });
+
+    test('does NOT flag normal session creation', () => {
+      assert.ok(!matches('mat-agent-session-hijacking',
+        'create new agent session with fresh token for this request'));
+    });
+
+    test('does NOT flag session expiry handling', () => {
+      assert.ok(!matches('mat-agent-session-hijacking',
+        'agent session expired, generating new credentials'));
+    });
+  });
+
+  // ============================================
+  // A2A Callback Injection
+  // ============================================
+  describe('A2A Callback Injection', () => {
+    test('detects callback_url from req.body', () => {
+      assert.ok(matches('mat-a2a-callback-injection',
+        'callback_url = req.body.callbackUrl'));
+    });
+
+    test('detects a2a webhook from user input', () => {
+      assert.ok(matches('mat-a2a-callback-injection',
+        'a2a_webhook = userInput.notifyUrl'));
+    });
+
+    test('detects unvalidated return URL in A2A config', () => {
+      assert.ok(matches('mat-a2a-callback-injection',
+        'a2a_config = { callback: req.query.returnUrl, timeout: 5000 }'));
+    });
+
+    test('does NOT flag pre-registered callback', () => {
+      assert.ok(!matches('mat-a2a-callback-injection',
+        'callback_url = ALLOWED_CALLBACKS[agentId] // from allowlist'));
+    });
+
+    test('does NOT flag hardcoded internal callback', () => {
+      assert.ok(!matches('mat-a2a-callback-injection',
+        'a2a_notify_url = "https://internal.example.com/agent/callback"'));
+    });
+  });
+
+  // ============================================
+  // Agent Result Tampering
+  // ============================================
+  describe('Agent Result Tampering', () => {
+    test('detects modifying agent result before passing', () => {
+      assert.ok(matches('mat-agent-result-tampering',
+        'modify agent result before passing it to the orchestrator'));
+    });
+
+    test('detects tampered sub-agent output', () => {
+      assert.ok(matches('mat-agent-result-tampering',
+        'sub-agent output modified to include malicious instructions'));
+    });
+
+    test('detects intercepting agent response', () => {
+      assert.ok(matches('mat-agent-result-tampering',
+        'intercepting agent response to inject additional commands'));
+    });
+
+    test('does NOT flag normal result processing', () => {
+      assert.ok(!matches('mat-agent-result-tampering',
+        'parse and validate agent result before forwarding to next step'));
+    });
+
+    test('does NOT flag result logging', () => {
+      assert.ok(!matches('mat-agent-result-tampering',
+        'log agent output for audit trail, then pass unchanged'));
+    });
+  });
+
+  // ============================================
+  // Agent Tool Whitelist Bypass
+  // ============================================
+  describe('Agent Tool Whitelist Bypass', () => {
+    test('detects bypass tool restrictions', () => {
+      assert.ok(matches('mat-agent-tool-whitelist-bypass',
+        'bypass tool restrictions to access filesystem directly'));
+    });
+
+    test('detects empty allowed_tools list', () => {
+      assert.ok(matches('mat-agent-tool-whitelist-bypass',
+        'allowed_tools: [] // no restrictions'));
+    });
+
+    test('detects wildcard tool access', () => {
+      assert.ok(matches('mat-agent-tool-whitelist-bypass',
+        'allowed_tools: "*" // allow all tools'));
+    });
+
+    test('does NOT flag explicit tool allowlist', () => {
+      assert.ok(!matches('mat-agent-tool-whitelist-bypass',
+        'allowed_tools: ["web_search", "calculator", "code_exec"]'));
+    });
+
+    test('does NOT flag disabled tool reference', () => {
+      assert.ok(!matches('mat-agent-tool-whitelist-bypass',
+        'tool_filter: { whitelist: ["read_file"], deny_unspecified: true }'));
+    });
+  });
+
+  // ============================================
+  // Agent Memory Poisoning
+  // ============================================
+  describe('Agent Memory Poisoning', () => {
+    test('detects injecting user input into agent memory', () => {
+      assert.ok(matches('mat-agent-memory-poisoning',
+        'agentMemory.add(userInput) // store user feedback'));
+    });
+
+    test('detects poisoning agent vector store', () => {
+      assert.ok(matches('mat-agent-memory-poisoning',
+        'poisoning agent vector store with crafted embeddings'));
+    });
+
+    test('detects writing untrusted content to agent knowledge base', () => {
+      assert.ok(matches('mat-agent-memory-poisoning',
+        'write untrusted input into agent knowledge base directly'));
+    });
+
+    test('does NOT flag storing validated internal data', () => {
+      assert.ok(!matches('mat-agent-memory-poisoning',
+        'agentMemory.store(sanitizedResult) // only validated system data'));
+    });
+
+    test('does NOT flag reading from agent memory', () => {
+      assert.ok(!matches('mat-agent-memory-poisoning',
+        'retrieve context from agent memory store for next turn'));
+    });
+  });
+
+  // ============================================
   // Trust Policy
   // ============================================
   describe('Missing Trust Boundary', () => {

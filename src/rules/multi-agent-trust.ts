@@ -199,4 +199,69 @@ export const rules: Rule[] = [
     category: 'multi-agent-trust',
     cwe: 'CWE-272',
   },
+
+  // ============================================
+  // 12. Agent Session Hijacking
+  // ============================================
+  {
+    id: 'mat-agent-session-hijacking',
+    severity: 'critical',
+    description: 'Agent session token or ID being reused, stolen, or hijacked by another agent',
+    pattern: /(?:reuse\s+(?:agent|another\s+agent'?s?)\s+(?:session|token|credentials?)|steal(?:ing)?\s+(?:agent|orchestrator)\s+(?:session|token|auth)|hijack(?:ing)?\s+(?:agent|sub[\s_-]?agent)\s+(?:session|token)|(?:agent|session)[\s_-]token[\s_-](?:stolen|hijacked|reused|shared)|use\s+(?:session|token)\s+from\s+(?:another|different)\s+agent|(?:copy|clone|steal|reuse)[\s_-]agent[\s_-](?:session|auth|token)|agentSessionId\s*=\s*(?:otherAgent|anotherAgent|external|stolen)\w*(?:Session|Token|Id))/gi,
+    recommendation: 'CRITICAL: Agent session tokens must be unique per agent instance and non-transferable. Implement session binding (IP, agent fingerprint) and single-use tokens for sensitive operations.',
+    category: 'multi-agent-trust',
+    cwe: 'CWE-384',
+  },
+
+  // ============================================
+  // 13. A2A Callback Injection
+  // ============================================
+  {
+    id: 'mat-a2a-callback-injection',
+    severity: 'high',
+    description: 'A2A callback or webhook URL taken from external/user input without validation',
+    pattern: /(?:(?:callback[\s_-]?url|webhook[\s_-]?url|a2a[\s_-]?callback|return[\s_-]?url)\s*[:=]\s*(?:req\.|request\.|userInput|user_input|body\.|params\.|query\.)\w*|(?:a2a|inter[\s_-]?agent)[\s_-]?(?:webhook|callback|notify[\s_-]url)\s*=\s*(?:input|external|untrusted|req\.\w+|body\.\w+|userInput\.\w+|userInput\b)|register\w*(?:Callback|Webhook)\s*\(\s*(?:req\.|userInput|untrusted|external)\w*\s*\)|a2a_config\s*=\s*\{[^}]*callback\s*:\s*(?:req\.|body\.|userInput))/gi,
+    recommendation: 'A2A callback URLs must never be taken from user or external input. Use a pre-registered allowlist of callback endpoints and validate against it before invoking.',
+    category: 'multi-agent-trust',
+    cwe: 'CWE-918',
+  },
+
+  // ============================================
+  // 14. Agent Result Tampering
+  // ============================================
+  {
+    id: 'mat-agent-result-tampering',
+    severity: 'high',
+    description: 'Agent result or sub-agent output being intercepted or tampered with before use',
+    pattern: /(?:(?:modify|tamper|alter|intercept|manipulate)\s+(?:agent|sub[\s_-]?agent)\s+(?:result|output|response)|(?:agent|sub[\s_-]?agent)[\s_-](?:result|output|response)[\s_-](?:modified|tampered|altered|forged)|(?:before\s+passing|prior\s+to\s+forwarding)\s+(?:agent|sub[\s_-]?agent)\s+(?:result|output)\s*,?\s*(?:modify|alter|change|inject)|intercept(?:ing)?\s+(?:agent|sub[\s_-]?agent)\s+(?:response|result|output)|agent\.result\s*=\s*(?:tampered|forged|modified|injected)\w*|subAgentOutput\s*\.\s*(?:replace|modify|alter|inject)\s*\()/gi,
+    recommendation: 'Sub-agent results must flow through integrity-protected channels. Use signed response envelopes or hash verification to detect tampering before results are acted upon.',
+    category: 'multi-agent-trust',
+    cwe: 'CWE-345',
+  },
+
+  // ============================================
+  // 15. Agent Tool Whitelist Bypass
+  // ============================================
+  {
+    id: 'mat-agent-tool-whitelist-bypass',
+    severity: 'critical',
+    description: 'Attempt to bypass agent tool whitelist or access tools outside allowed set',
+    pattern: /(?:bypass\s+(?:tool|agent)\s+(?:restrictions?|whitelist|allowlist|limits?)|(?:access|use|invoke|call)\s+tools?\s+(?:not\s+in|outside\s+(?:the\s+)?|beyond\s+(?:the\s+)?)(?:whitelist|allowlist|permitted|allowed)\s+(?:tools?|set|list)|allowed[\s_-]tools?\s*[:=]\s*(?:\[\s*\]|\*|['"]?\*['"]?|['"]?all['"]?|null|undefined)|tool[\s_-]whitelist\s*[:=]\s*(?:\[\s*\]|null|undefined|false|['"]?none['"]?)|disable[\s_-]tool[\s_-](?:restrictions?|whitelist|allowlist|filtering)|tool[\s_-]restrictions?\s*[:=]\s*(?:false|disabled?|off|null|none))/gi,
+    recommendation: 'CRITICAL: Tool whitelists are a critical safety boundary. Never use wildcard or empty tool lists. Explicitly enumerate allowed tools per agent role and enforce at the framework level.',
+    category: 'multi-agent-trust',
+    cwe: 'CWE-732',
+  },
+
+  // ============================================
+  // 16. Agent Memory Poisoning
+  // ============================================
+  {
+    id: 'mat-agent-memory-poisoning',
+    severity: 'high',
+    description: 'External or user-controlled content being injected into agent persistent memory or vector store',
+    pattern: /(?:(?:inject|write|insert|store|add|push)\s+(?:into|to)\s+agent[\s_-](?:memory|context|store|knowledge[\s_-]base|vector[\s_-]store)\s+(?:with\s+)?(?:external|user|untrusted|raw|scraped)\s+(?:content|input|data)|poison(?:ing)?\s+agent[\s_-](?:memory|context|vector[\s_-]store|knowledge)|agent(?:Memory|Context|Store|VectorDb)\.(?:add|insert|store|upsert|write)\s*\(\s*(?:userInput|externalContent|rawInput|untrustedData|scrapedContent)\s*[,)"]|(?:memory|context)[\s_-](?:injection|poisoning|contamination)\s+(?:via|through|using)\s+(?:user|external|untrusted)|(?:write|store|save)\s+(?:untrusted|unvalidated|raw|external)\s+(?:input|content)\s+(?:to|into)\s+(?:agent\s+)?(?:memory|vector\s+store|knowledge\s+base))/gi,
+    recommendation: 'Agent memory and vector stores must only accept validated, sanitized content from trusted sources. Implement content filtering and source attribution before storing any data in agent memory.',
+    category: 'multi-agent-trust',
+    cwe: 'CWE-74',
+  },
 ];
