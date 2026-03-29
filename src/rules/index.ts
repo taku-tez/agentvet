@@ -46,6 +46,7 @@ import * as agenticLoop from './agentic-loop.js';
 import * as insecureLlmEndpoint from './insecure-llm-endpoint.js';
 import * as unsafeOutput from './unsafe-output.js';
 import * as resourceExhaustion from './resource-exhaustion.js';
+import * as codingAgentConfig from './coding-agent-config.js';
 
 export {
   credentials,
@@ -86,6 +87,7 @@ export {
   agenticLoop,
   insecureLlmEndpoint,
   unsafeOutput,
+  codingAgentConfig,
 };
 
 // Combined rules array
@@ -133,6 +135,7 @@ export const all = [
   ...insecureLlmEndpoint.rules,
   ...unsafeOutput.rules,
   ...resourceExhaustion.rules,
+  ...codingAgentConfig.rules,
 ];
 
 // CommonJS compatibility
@@ -177,5 +180,6 @@ module.exports = {
   insecureLlmEndpoint,
   unsafeOutput,
   resourceExhaustion,
+  codingAgentConfig,
   all,
 };
