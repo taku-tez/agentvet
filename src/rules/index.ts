@@ -51,6 +51,9 @@ import * as mcpCommandInjection from './mcp-command-injection.js';
 import * as agentIdentitySpoofing from './agent-identity-spoofing.js';
 import * as mcpCallbackExfil from './mcp-callback-exfil.js';
 import * as agentSessionHijack from './agent-session-hijack.js';
+import * as mcpTokenLoop from './mcp-token-loop.js';
+import * as agentCredentialRelay from './agent-credential-relay.js';
+import * as agentShadowWorkspace from './agent-shadow-workspace.js';
 
 export {
   credentials,
@@ -148,6 +151,9 @@ export const all = [
   ...agentIdentitySpoofing.rules,
   ...mcpCallbackExfil.rules,
   ...agentSessionHijack.rules,
+  ...mcpTokenLoop.rules,
+  ...agentCredentialRelay.rules,
+  ...agentShadowWorkspace.rules,
 ];
 
 // CommonJS compatibility
@@ -197,5 +203,8 @@ module.exports = {
   agentIdentitySpoofing,
   mcpCallbackExfil,
   agentSessionHijack,
+  mcpTokenLoop,
+  agentCredentialRelay,
+  agentShadowWorkspace,
   all,
 };
