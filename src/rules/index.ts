@@ -47,6 +47,10 @@ import * as insecureLlmEndpoint from './insecure-llm-endpoint.js';
 import * as unsafeOutput from './unsafe-output.js';
 import * as resourceExhaustion from './resource-exhaustion.js';
 import * as codingAgentConfig from './coding-agent-config.js';
+import * as mcpCommandInjection from './mcp-command-injection.js';
+import * as agentIdentitySpoofing from './agent-identity-spoofing.js';
+import * as mcpCallbackExfil from './mcp-callback-exfil.js';
+import * as agentSessionHijack from './agent-session-hijack.js';
 
 export {
   credentials,
@@ -88,6 +92,10 @@ export {
   insecureLlmEndpoint,
   unsafeOutput,
   codingAgentConfig,
+  mcpCommandInjection,
+  agentIdentitySpoofing,
+  mcpCallbackExfil,
+  agentSessionHijack,
 };
 
 // Combined rules array
@@ -136,6 +144,10 @@ export const all = [
   ...unsafeOutput.rules,
   ...resourceExhaustion.rules,
   ...codingAgentConfig.rules,
+  ...mcpCommandInjection.rules,
+  ...agentIdentitySpoofing.rules,
+  ...mcpCallbackExfil.rules,
+  ...agentSessionHijack.rules,
 ];
 
 // CommonJS compatibility
@@ -181,5 +193,9 @@ module.exports = {
   unsafeOutput,
   resourceExhaustion,
   codingAgentConfig,
+  mcpCommandInjection,
+  agentIdentitySpoofing,
+  mcpCallbackExfil,
+  agentSessionHijack,
   all,
 };
